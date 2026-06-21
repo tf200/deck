@@ -173,6 +173,11 @@ return [
 		['name' => 'comments_api#update', 'url' => '/api/v{apiVersion}/cards/{cardId}/comments/{commentId}', 'verb' => 'PUT'],
 		['name' => 'comments_api#delete', 'url' => '/api/v{apiVersion}/cards/{cardId}/comments/{commentId}', 'verb' => 'DELETE'],
 
+		['name' => 'private_note_api#listNotes', 'url' => '/api/v{apiVersion}/cards/{cardId}/private-notes', 'verb' => 'GET'],
+		['name' => 'private_note_api#createNote', 'url' => '/api/v{apiVersion}/cards/{cardId}/private-notes', 'verb' => 'POST'],
+		['name' => 'private_note_api#updateNote', 'url' => '/api/v{apiVersion}/cards/{cardId}/private-notes/{noteId}', 'verb' => 'PUT'],
+		['name' => 'private_note_api#deleteNote', 'url' => '/api/v{apiVersion}/cards/{cardId}/private-notes/{noteId}', 'verb' => 'DELETE'],
+
 		['name' => 'card#clone', 'url' => '/api/v{apiVersion}/cards/{cardId}/clone', 'verb' => 'POST'],
 
 		['name' => 'overview_api#upcomingCards', 'url' => '/api/v{apiVersion}/overview/upcoming', 'verb' => 'GET'],

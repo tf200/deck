@@ -68,6 +68,16 @@
 			<CardSidebarTabComments :card="currentCard" :tab-query="tabQuery" />
 		</NcAppSidebarTab>
 
+		<NcAppSidebarTab id="private-notes"
+			:order="2.5"
+			:name="t('deck', 'Private Notes')">
+			<template #icon>
+				<LockIcon v-if="activeTabId === 'private-notes'" :size="20" />
+				<LockOutlineIcon v-else :size="20" />
+			</template>
+			<CardSidebarTabPrivateNotes :card="currentCard" />
+		</NcAppSidebarTab>
+
 		<NcAppSidebarTab v-if="hasActivity"
 			id="timeline"
 			:order="3"
@@ -88,6 +98,7 @@ import { mapState, mapGetters } from 'vuex'
 import CardSidebarTabDetails from './CardSidebarTabDetails.vue'
 import CardSidebarTabAttachments from './CardSidebarTabAttachments.vue'
 import CardSidebarTabComments from './CardSidebarTabComments.vue'
+import CardSidebarTabPrivateNotes from './CardSidebarTabPrivateNotes.vue'
 import CardSidebarTabActivity from './CardSidebarTabActivity.vue'
 import relativeDate from '../../mixins/relativeDate.js'
 import moment from '@nextcloud/moment'
@@ -96,6 +107,8 @@ import HomeIcon from 'vue-material-design-icons/Home.vue'
 import HomeOutlineIcon from 'vue-material-design-icons/HomeOutline.vue'
 import CommentIcon from 'vue-material-design-icons/Comment.vue'
 import CommentOutlineIcon from 'vue-material-design-icons/CommentOutline.vue'
+import LockIcon from 'vue-material-design-icons/Lock.vue'
+import LockOutlineIcon from 'vue-material-design-icons/LockOutline.vue'
 import ActivityIcon from 'vue-material-design-icons/LightningBolt.vue'
 
 import { showError, showWarning } from '@nextcloud/dialogs'
@@ -113,12 +126,15 @@ export default {
 		NcReferenceList,
 		CardSidebarTabAttachments,
 		CardSidebarTabComments,
+		CardSidebarTabPrivateNotes,
 		CardSidebarTabActivity,
 		CardSidebarTabDetails,
 		ActivityIcon,
 		AttachmentIcon,
 		CommentIcon,
 		CommentOutlineIcon,
+		LockIcon,
+		LockOutlineIcon,
 		HomeIcon,
 		HomeOutlineIcon,
 		CardMenuEntries,

@@ -17,6 +17,7 @@ import comment from './comment.js'
 import trashbin from './trashbin.js'
 import attachment from './attachment.js'
 import overview from './overview.js'
+import privateNote from './privateNote.js'
 Vue.use(Vuex)
 
 const apiClient = new BoardApi()
@@ -40,6 +41,7 @@ export default function storeFactory() {
 			trashbin,
 			attachment,
 			overview,
+			privateNote,
 		},
 		strict: debug,
 		state: {
