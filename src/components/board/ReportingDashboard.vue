@@ -15,7 +15,7 @@
 		<div v-else class="reporting-dashboard__content">
 			<!-- KPI Grid -->
 			<div class="reporting-dashboard__kpis">
-				<div class="reporting-dashboard__kpi-card">
+				<div class="reporting-dashboard__kpi-card total-card">
 					<div class="reporting-dashboard__kpi-icon total-icon">
 						<ClipboardTextOutlineIcon :size="28" decorative />
 					</div>
@@ -24,7 +24,7 @@
 						<span class="reporting-dashboard__kpi-label">Total Tasks</span>
 					</div>
 				</div>
-				<div class="reporting-dashboard__kpi-card">
+				<div class="reporting-dashboard__kpi-card completed-card">
 					<div class="reporting-dashboard__kpi-icon completed-icon">
 						<CheckCircleOutlineIcon :size="28" decorative />
 					</div>
@@ -33,7 +33,7 @@
 						<span class="reporting-dashboard__kpi-label">Completed</span>
 					</div>
 				</div>
-				<div class="reporting-dashboard__kpi-card" :class="{ 'has-overdue': overdueCount > 0 }">
+				<div class="reporting-dashboard__kpi-card overdue-card" :class="{ 'has-overdue': overdueCount > 0 }">
 					<div class="reporting-dashboard__kpi-icon overdue-icon">
 						<ClockOutlineIcon :size="28" decorative />
 					</div>
@@ -42,15 +42,15 @@
 						<span class="reporting-dashboard__kpi-label">Overdue</span>
 					</div>
 				</div>
-				<div class="reporting-dashboard__kpi-card">
+				<div class="reporting-dashboard__kpi-card open-card">
 					<div class="reporting-dashboard__kpi-icon open-icon">
 						<FolderOpenOutlineIcon :size="28" decorative />
 					</div>
 					<div class="reporting-dashboard__kpi-details">
 						<div class="reporting-dashboard__open-tasks-split">
-							<div>
-								<span class="reporting-dashboard__kpi-label">Kritieke Processtap</span>
-								<span class="reporting-dashboard__kpi-subvalue">{{ openImportantCount }} / {{ totalImportantCount }}</span>
+							<div class="reporting-dashboard__split-important">
+								<span class="reporting-dashboard__kpi-label important-label">Kritieke Processtap</span>
+								<span class="reporting-dashboard__kpi-subvalue important-value">{{ openImportantCount }} / {{ totalImportantCount }}</span>
 							</div>
 							<div class="reporting-dashboard__split-divider"></div>
 							<div>
@@ -291,9 +291,64 @@ export default {
 	box-shadow: 0 4px 12px rgba(0,0,0,0.06);
 }
 
-.reporting-dashboard__kpi-card.has-overdue {
-	border-color: #e74c3c;
-	background: rgba(231, 76, 60, 0.05);
+.reporting-dashboard__kpi-card.total-card {
+	border-color: rgba(52, 152, 219, 0.3);
+	background: rgba(52, 152, 219, 0.04);
+}
+.reporting-dashboard__kpi-card.total-card .reporting-dashboard__kpi-icon {
+	color: #3498db;
+	background: rgba(52, 152, 219, 0.1);
+	border-color: rgba(52, 152, 219, 0.2);
+}
+
+.reporting-dashboard__kpi-card.completed-card {
+	border-color: rgba(46, 204, 113, 0.3);
+	background: rgba(46, 204, 113, 0.04);
+}
+.reporting-dashboard__kpi-card.completed-card .reporting-dashboard__kpi-icon {
+	color: #2ecc71;
+	background: rgba(46, 204, 113, 0.1);
+	border-color: rgba(46, 204, 113, 0.2);
+}
+
+.reporting-dashboard__kpi-card.overdue-card {
+	border-color: rgba(230, 126, 34, 0.3);
+	background: rgba(230, 126, 34, 0.04);
+}
+.reporting-dashboard__kpi-card.overdue-card .reporting-dashboard__kpi-icon {
+	color: #e67e22;
+	background: rgba(230, 126, 34, 0.1);
+	border-color: rgba(230, 126, 34, 0.2);
+}
+.reporting-dashboard__kpi-card.overdue-card.has-overdue {
+	border-color: rgba(231, 76, 60, 0.5);
+	background: rgba(231, 76, 60, 0.06);
+}
+.reporting-dashboard__kpi-card.overdue-card.has-overdue .reporting-dashboard__kpi-icon {
+	color: #e74c3c;
+	background: rgba(231, 76, 60, 0.15);
+	border-color: rgba(231, 76, 60, 0.3);
+}
+
+.reporting-dashboard__kpi-card.open-card {
+	border-color: rgba(155, 89, 182, 0.3);
+	background: rgba(155, 89, 182, 0.04);
+}
+.reporting-dashboard__kpi-card.open-card .reporting-dashboard__kpi-icon {
+	color: #9b59b6;
+	background: rgba(155, 89, 182, 0.1);
+	border-color: rgba(155, 89, 182, 0.2);
+}
+
+/* Red counter highlight for Critical Process Steps */
+.reporting-dashboard__open-tasks-split .important-label {
+	color: #e74c3c !important;
+	font-weight: 600;
+}
+.reporting-dashboard__open-tasks-split .important-value {
+	color: #e74c3c !important;
+	font-size: 15px;
+	font-weight: 700;
 }
 
 .reporting-dashboard__kpi-icon {
