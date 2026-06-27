@@ -16,28 +16,36 @@
 			<!-- KPI Grid -->
 			<div class="reporting-dashboard__kpis">
 				<div class="reporting-dashboard__kpi-card">
-					<div class="reporting-dashboard__kpi-icon total-icon">📋</div>
+					<div class="reporting-dashboard__kpi-icon total-icon">
+						<ClipboardTextOutlineIcon :size="28" decorative />
+					</div>
 					<div class="reporting-dashboard__kpi-details">
 						<span class="reporting-dashboard__kpi-value">{{ totalCount }}</span>
 						<span class="reporting-dashboard__kpi-label">Total Tasks</span>
 					</div>
 				</div>
 				<div class="reporting-dashboard__kpi-card">
-					<div class="reporting-dashboard__kpi-icon completed-icon">✅</div>
+					<div class="reporting-dashboard__kpi-icon completed-icon">
+						<CheckCircleOutlineIcon :size="28" decorative />
+					</div>
 					<div class="reporting-dashboard__kpi-details">
 						<span class="reporting-dashboard__kpi-value">{{ completedCount }}</span>
 						<span class="reporting-dashboard__kpi-label">Completed</span>
 					</div>
 				</div>
 				<div class="reporting-dashboard__kpi-card" :class="{ 'has-overdue': overdueCount > 0 }">
-					<div class="reporting-dashboard__kpi-icon overdue-icon">⏰</div>
+					<div class="reporting-dashboard__kpi-icon overdue-icon">
+						<ClockOutlineIcon :size="28" decorative />
+					</div>
 					<div class="reporting-dashboard__kpi-details">
 						<span class="reporting-dashboard__kpi-value">{{ overdueCount }}</span>
 						<span class="reporting-dashboard__kpi-label">Overdue</span>
 					</div>
 				</div>
 				<div class="reporting-dashboard__kpi-card">
-					<div class="reporting-dashboard__kpi-icon open-icon">📂</div>
+					<div class="reporting-dashboard__kpi-icon open-icon">
+						<FolderOpenOutlineIcon :size="28" decorative />
+					</div>
 					<div class="reporting-dashboard__kpi-details">
 						<div class="reporting-dashboard__open-tasks-split">
 							<div>
@@ -94,8 +102,19 @@
 </template>
 
 <script>
+import ClipboardTextOutlineIcon from 'vue-material-design-icons/ClipboardTextOutline.vue'
+import CheckCircleOutlineIcon from 'vue-material-design-icons/CheckCircleOutline.vue'
+import ClockOutlineIcon from 'vue-material-design-icons/ClockOutline.vue'
+import FolderOpenOutlineIcon from 'vue-material-design-icons/FolderOpenOutline.vue'
+
 export default {
 	name: 'ReportingDashboard',
+	components: {
+		ClipboardTextOutlineIcon,
+		CheckCircleOutlineIcon,
+		ClockOutlineIcon,
+		FolderOpenOutlineIcon,
+	},
 	props: {
 		boardId: {
 			type: Number,
