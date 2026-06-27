@@ -240,6 +240,13 @@
 						</template>
 						{{ t('deck', 'Gantt view') }}
 					</NcActionButton>
+					<NcActionButton :model-value="viewMode === 'reporting'"
+						@click="setViewMode('reporting')">
+						<template #icon>
+							<ChartBarIcon :size="20" decorative />
+						</template>
+						{{ t('deck', 'Reporting view') }}
+					</NcActionButton>
 					<NcActionSeparator />
 					<NcActionButton @click="toggleShowArchived">
 						<template #icon>
@@ -290,6 +297,7 @@ import ArrowCollapseVerticalIcon from 'vue-material-design-icons/ArrowCollapseVe
 import ArrowExpandVerticalIcon from 'vue-material-design-icons/ArrowExpandVertical.vue'
 import ViewColumnIcon from 'vue-material-design-icons/ViewColumn.vue'
 import ChartGanttIcon from 'vue-material-design-icons/ChartGantt.vue'
+import ChartBarIcon from 'vue-material-design-icons/ChartBar.vue'
 import SessionList from './SessionList.vue'
 import { isNotifyPushEnabled } from '../sessions.js'
 import CreateNewCardCustomPicker from '../views/CreateNewCardCustomPicker.vue'
@@ -313,6 +321,7 @@ export default {
 		ArrowExpandVerticalIcon,
 		ViewColumnIcon,
 		ChartGanttIcon,
+		ChartBarIcon,
 		NcActionSeparator,
 		TableColumnPlusAfter,
 		SessionList,

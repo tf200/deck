@@ -50,6 +50,9 @@
 				key="gantt"
 				:board="board"
 				:stacks="stacksByBoard" />
+			<ReportingDashboard v-else-if="!isEmpty && !loading && viewMode === 'reporting'"
+				key="reporting"
+				:board-id="board.id" />
 			<div v-else-if="!isEmpty && !loading"
 				key="board"
 				ref="board"
@@ -93,6 +96,7 @@ import DeckIcon from '../icons/DeckIcon.vue'
 import CheckIcon from 'vue-material-design-icons/Check.vue'
 import Stack from './Stack.vue'
 import GanttView from './GanttView.vue'
+import ReportingDashboard from './ReportingDashboard.vue'
 import { NcEmptyContent, NcModal, NcButton, NcTextField, NcLoadingIcon } from '@nextcloud/vue'
 import GlobalSearchResults from '../search/GlobalSearchResults.vue'
 import { showError } from '../../helpers/errors.js'
@@ -108,6 +112,7 @@ export default {
 		Draggable,
 		Stack,
 		GanttView,
+		ReportingDashboard,
 		NcEmptyContent,
 		NcModal,
 		NcTextField,

@@ -10,6 +10,7 @@ import ClickOutside from 'vue-click-outside'
 import { translate, translatePlural } from '@nextcloud/l10n'
 import Board from './components/board/Board.vue'
 import SharingTabSidebar from './components/board/SharingTabSidebar.vue'
+import ReportingDashboard from './components/board/ReportingDashboard.vue'
 import { BoardApi } from './services/BoardApi.js'
 import './shared-init.js'
 import './models/index.js'
@@ -172,6 +173,46 @@ window.OCA.Deck.EmbeddedPermissionsOverview = {
 			destroy() {
 				vm.$destroy()
 				el.innerHTML = ''
+			}
+		}
+	}
+}
+
+window.OCA.Deck.EmbeddedAnalytics = {
+	mount({ el, boardId }) {
+		const pinia = createPinia()
+		const store = storeFactory()
+
+		store.commit('setFullApp', false)
+
+		const mountEl = document.createElement('div')
+		mountEl.style.height = '100%'
+		mountEl.style.width = '100%'
+		el.appendChild(mountEl)
+
+		const vm = new Vue({
+			el: mountEl,
+			store,
+			pinia,
+			provide() {
+				return {
+					boardApi,
+				}
+			},
+			render: h => h(ReportingDashboard, {
+				props: {
+					boardId: Number(boardId),
+				}
+			})
+		})
+
+		return {
+			destroy() {
+				vm.$destroy()
+				el.innerHTML = ''
+			},
+			setBoardId(newBoardId) {
+				// handled by remount in DeckAnalytics.vue
 			}
 		}
 	}
