@@ -249,7 +249,7 @@ export default {
 		ganttTasks: {
 			deep: true,
 			handler(tasks, oldTasks) {
-				if (oldTasks.length === 0 && tasks.length > 0) {
+				if (!this.ganttInstance && tasks.length > 0) {
 					this.$nextTick(() => this.renderGantt())
 					return
 				}
@@ -288,9 +288,28 @@ export default {
 		}
 		document.addEventListener('mouseup', this._onMouseUp)
 		this.$nextTick(() => this.renderGantt())
+
+		if (typeof ResizeObserver !== 'undefined') {
+			let lastWidth = 0
+			this._resizeObserver = new ResizeObserver((entries) => {
+				for (const entry of entries) {
+					const width = entry.contentRect.width
+					if (width !== lastWidth) {
+						lastWidth = width
+						this.fitColumnsToWidth()
+					}
+				}
+			})
+			if (this.$refs.ganttContainer) {
+				this._resizeObserver.observe(this.$refs.ganttContainer)
+			}
+		}
 	},
 	beforeDestroy() {
 		document.removeEventListener('mouseup', this._onMouseUp)
+		if (this._resizeObserver) {
+			this._resizeObserver.disconnect()
+		}
 		this.ganttInstance = null
 	},
 	methods: {

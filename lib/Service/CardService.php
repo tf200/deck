@@ -67,6 +67,10 @@ class CardService {
 	 * @return CardDetails[]
 	 */
 	public function enrichCards(array $cards): array {
+		if (class_exists('\OCA\ProjectCreatorAIO\Service\CardPolicyService')) {
+			$policyService = \OCP\Server::get(\OCA\ProjectCreatorAIO\Service\CardPolicyService::class);
+			$cards = $policyService->filterVisibleCards($cards, $this->userId);
+		}
 		$user = $this->userManager->get($this->userId);
 
 		$allCardIds = array_map(fn (Card $card) => $card->getId(), $cards);
@@ -311,6 +315,13 @@ class CardService {
 			$card->setDone(null);
 		}
 
+		if (class_exists('\OCA\ProjectCreatorAIO\Service\CardPolicyService')) {
+			$policyService = \OCP\Server::get(\OCA\ProjectCreatorAIO\Service\CardPolicyService::class);
+			$policyService->assertTransition($changes->getBefore(), $stackId, $this->userId);
+			if ($done !== null && ($changes->getBefore()->getDone() === null) !== ($done->getValue() === null)) {
+				$policyService->assertAction($card, 'verify', $this->userId);
+			}
+		}
 
 		// Trigger update events before setting description as it is handled separately
 		$changes->setAfter($card);
@@ -444,6 +455,10 @@ class CardService {
 		$card = $this->cardMapper->find($id);
 		if ($card->getArchived()) {
 			throw new StatusException('Operation not allowed. This card is archived.');
+		}
+		if (class_exists('\OCA\ProjectCreatorAIO\Service\CardPolicyService')) {
+			$policyService = \OCP\Server::get(\OCA\ProjectCreatorAIO\Service\CardPolicyService::class);
+			$policyService->assertTransition($card, $stackId, $this->userId);
 		}
 		$changes = new ChangeSet($card);
 		$oldStackId = $card->getStackId();

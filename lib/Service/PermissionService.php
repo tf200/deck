@@ -145,6 +145,12 @@ class PermissionService {
 	 * @throws NoPermissionException
 	 */
 	public function checkPermission(?IPermissionMapper $mapper, $id, int $permission, $userId = null, bool $allowDeletedCard = false, bool $allowDeletedBoard = false): bool {
+		if ($mapper !== null && class_exists('\OCA\ProjectCreatorAIO\Service\CardPolicyService')) {
+			$policyService = \OCP\Server::get(\OCA\ProjectCreatorAIO\Service\CardPolicyService::class);
+			if (!$policyService->checkPermission($mapper, $id, $permission, $userId)) {
+				throw new NoPermissionException('Permission denied by card policy');
+			}
+		}
 		$boardId = (int)$id;
 		if ($mapper instanceof IPermissionMapper && !($mapper instanceof BoardMapper)) {
 			$boardId = $mapper->findBoardId($id);
