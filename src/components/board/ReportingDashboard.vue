@@ -221,6 +221,7 @@ export default {
 	async created() {
 		try {
 			await this.$store.dispatch('loadBoardById', this.boardId)
+			await this.$store.dispatch('loadStacks', this.boardId)
 		} catch (e) {
 			this.error = 'Failed to load board statistics'
 		} finally {
