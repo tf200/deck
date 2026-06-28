@@ -79,6 +79,21 @@ class Board extends RelationalEntity {
 		// however this would be a breaking change for consumers of the API
 		$json['acl'] = $this->acl ?? [];
 		$json['labels'] = $this->labels ?? [];
+
+		try {
+			$db = \OCP\Server::get(\OCP\IDBConnection::class);
+			$qb = $db->getQueryBuilder();
+			$qb->select('board_id')
+				->from('pc_board_policy_settings')
+				->where($qb->expr()->eq('board_id', $qb->createNamedParameter((int)$this->getId(), \OCP\DB\QueryBuilder\IQueryBuilder::PARAM_INT)));
+			$res = $qb->executeQuery();
+			$row = $res->fetch();
+			$res->closeCursor();
+			$json['isProjectBoard'] = !empty($row);
+		} catch (\Throwable $e) {
+			$json['isProjectBoard'] = false;
+		}
+
 		return $json;
 	}
 
