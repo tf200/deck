@@ -155,6 +155,9 @@ export default {
 			return this.board?.id ? this.$store.getters.stacksByBoard(this.board.id) : []
 		},
 		dragHandleSelector() {
+			if (this.board?.isProjectBoard) {
+				return '.no-drag'
+			}
 			return this.canEdit ? '.stack__title' : '.no-drag'
 		},
 		isEmpty() {
