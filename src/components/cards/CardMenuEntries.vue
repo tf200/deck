@@ -38,7 +38,8 @@
 		<NcActionButton v-if="canEdit"
 			icon="icon-checkmark"
 			:close-after-click="true"
-			:disabled="isInDoneColumn && !!card.done"
+			:disabled="(isInDoneColumn && !!card.done) || (!card.done && hasUnmetDependencies)"
+			:title="(!card.done && hasUnmetDependencies) ? t('deck', 'Not all dependent cards are done.') : ''"
 			@click="changeCardDoneStatus()">
 			{{ card.done ? t('deck', 'Mark as not done') : t('deck', 'Mark as done') }}
 		</NcActionButton>
@@ -129,6 +130,9 @@ export default {
 		},
 		isInDoneColumn() {
 			return this.stackById(this.card.stackId)?.isDoneColumn === true
+		},
+		hasUnmetDependencies() {
+			return this.$store.getters.hasUnmetDependencies(this.card)
 		},
 		canEditBoard() {
 			if (this.currentBoard) {

@@ -50,12 +50,18 @@
 			<NcButton v-if="!card.done"
 				type="secondary"
 				class="completed-button"
+				:disabled="hasUnmetDependencies"
+				:title="hasUnmetDependencies ? t('deck', 'Not all dependent cards are done.') : t('deck', 'Mark as done')"
 				@click="changeCardDoneStatus()">
 				<template #icon>
 					<CheckIcon :size="20" />
 				</template>
 				{{ t('deck', 'Mark as done') }}
 			</NcButton>
+
+			<div v-if="hasUnmetDependencies" class="dependency-warning">
+				{{ t('deck', 'Not all dependent cards are done.') }}
+			</div>
 		</template>
 		<template v-else>
 			<div class="done-info">
@@ -155,6 +161,9 @@ export default defineComponent({
 		}
 	},
 	computed: {
+		hasUnmetDependencies() {
+			return this.$store.getters.hasUnmetDependencies(this.card)
+		},
 		duedate: {
 			get() {
 				return this.card?.duedate ? new Date(this.card.duedate) : null
@@ -259,5 +268,19 @@ export default defineComponent({
 .due-actions {
 	display: flex;
 	align-items: flex-start;
+}
+
+.dependency-warning {
+	margin-top: 8px;
+	padding: 8px 12px;
+	border-radius: var(--border-radius-large);
+	color: var(--color-element-warning, var(--color-warning-text));
+	background-color: rgba(var(--color-warning-rgb), .15);
+	border: 1px solid rgba(var(--color-warning-rgb), .3);
+	font-size: 13px;
+	display: flex;
+	align-items: center;
+	gap: 6px;
+	width: 100%;
 }
 </style>

@@ -33,6 +33,12 @@
 					<AttachmentIcon :size="16" />
 					<span>{{ card.attachmentCount }}</span>
 				</div>
+
+				<div v-if="hasUnmetDependencies"
+					:title="t('deck', 'Blocked by other cards')"
+					class="icon-badge dependency-blocked-badge">
+					<DependencyIcon :size="16" />
+				</div>
 			</div>
 		</div>
 
@@ -52,6 +58,7 @@ import CheckmarkIcon from 'vue-material-design-icons/CheckboxMarked.vue'
 import CommentIcon from 'vue-material-design-icons/CommentOutline.vue'
 import CommentUnreadIcon from 'vue-material-design-icons/CommentAccountOutline.vue'
 import DueDate from './badges/DueDate.vue'
+import DependencyIcon from 'vue-material-design-icons/ListBoxOutline.vue'
 
 export default {
 	name: 'CardBadges',
@@ -64,6 +71,7 @@ export default {
 		CommentIcon,
 		CommentUnreadIcon,
 		CardId,
+		DependencyIcon,
 	},
 	props: {
 		card: {
@@ -72,6 +80,9 @@ export default {
 		},
 	},
 	computed: {
+		hasUnmetDependencies() {
+			return this.$store.getters.hasUnmetDependencies(this.card)
+		},
 		checkListCount() {
 			return (this.card.description.match(/^\s*([*+-]|(\d\.))\s+\[\s*(\s|x)\s*\](.*)$/gim) || []).length
 		},
@@ -120,6 +131,10 @@ export default {
 			&:deep(span) {
 				padding: 2px;
 			}
+		}
+
+		.dependency-blocked-badge {
+			color: var(--color-element-warning, var(--color-warning-text)) !important;
 		}
 	}
 

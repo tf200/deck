@@ -6,6 +6,7 @@
 import { CardApi } from './../services/CardApi.js'
 import moment from 'moment'
 import Vue from 'vue'
+import { showError } from './../helpers/errors.js'
 
 const apiClient = new CardApi()
 
@@ -187,6 +188,15 @@ export default function cardModuleFactory() {
 			cardById: state => (id) => {
 				return state.cards.find((card) => card.id === id)
 			},
+			hasUnmetDependencies: (state, getters) => (card) => {
+				if (!card || !Array.isArray(card.dependentCards)) {
+					return false
+				}
+				return card.dependentCards.some((id) => {
+					const depCard = getters.cardById(parseInt(id, 10))
+					return depCard && !depCard.done
+				})
+			},
 		},
 		mutations: {
 			addCard(state, card) {
@@ -298,7 +308,7 @@ export default function cardModuleFactory() {
 				const updatedCard = await apiClient.updateCard(card, oldBoardId)
 				commit('deleteCard', updatedCard)
 			},
-			async reorderCard({ commit, getters }, card) {
+			async reorderCard({ commit, getters, dispatch }, card) {
 				let i = 0
 				const newCards = []
 				for (const c of getters.cardsByStack(card.stackId)) {
@@ -316,9 +326,13 @@ export default function cardModuleFactory() {
 				await commit('updateCardsReorder', newCards)
 
 				const stack = getters.stackById(card.stackId)
-				apiClient.reorderCard(card, stack.boardId).then((cards) => {
+				try {
+					const cards = await apiClient.reorderCard(card, stack.boardId)
 					commit('updateCardsReorder', Object.values(cards))
-				})
+				} catch (err) {
+					showError(err)
+					dispatch('loadStacks', stack.boardId)
+				}
 			},
 			async deleteCard({ commit }, card) {
 				await apiClient.deleteCard(card.id)
@@ -340,17 +354,22 @@ export default function cardModuleFactory() {
 					call = 'markCardAsUndone'
 				}
 
-				const updatedCard = await apiClient[call](card)
-				commit('updateCardProperty', { property: 'done', card: updatedCard })
+				try {
+					const updatedCard = await apiClient[call](card)
+					commit('updateCardProperty', { property: 'done', card: updatedCard })
 
-				if (card.done !== false) {
-					const cardStack = rootState.stack.stacks.find(s => s.id === card.stackId)
-					const doneStack = rootState.stack.stacks.find(
-						s => s.boardId === cardStack?.boardId && s.isDoneColumn,
-					)
-					if (doneStack && card.stackId !== doneStack.id) {
-						await dispatch('reorderCard', { ...updatedCard, stackId: doneStack.id, order: 0 })
+					if (card.done !== false) {
+						const cardStack = rootState.stack.stacks.find(s => s.id === card.stackId)
+						const doneStack = rootState.stack.stacks.find(
+							s => s.boardId === cardStack?.boardId && s.isDoneColumn,
+						)
+						if (doneStack && card.stackId !== doneStack.id) {
+							await dispatch('reorderCard', { ...updatedCard, stackId: doneStack.id, order: 0 })
+						}
 					}
+				} catch (err) {
+					showError(err)
+					throw err
 				}
 			},
 			async assignCardToUser({ commit }, { card, assignee }) {

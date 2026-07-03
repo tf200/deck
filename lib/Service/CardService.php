@@ -59,6 +59,7 @@ class CardService {
 		private AssignmentService $assignmentService,
 		private IReferenceManager $referenceManager,
 		private ?string $userId,
+		private ?\OCP\IL10N $l10n = null,
 	) {
 	}
 
@@ -310,6 +311,9 @@ class CardService {
 			$card->setArchived($archived);
 		}
 		if ($done !== null) {
+			if ($done->getValue() !== null && $changes->getBefore()->getDone() === null) {
+				$this->checkDependencies($card);
+			}
 			$card->setDone($done->getValue());
 		} else {
 			$card->setDone(null);
@@ -467,6 +471,9 @@ class CardService {
 		if ($stackId !== $oldStackId) {
 			$newStack = $this->stackMapper->find($stackId);
 			if ($newStack->getIsDoneColumn()) {
+				if ($card->getDone() === null) {
+					$this->checkDependencies($card);
+				}
 				$card->setDone(new \DateTime());
 			} else {
 				$oldStack = $this->stackMapper->find($oldStackId);
@@ -575,6 +582,7 @@ class CardService {
 			throw new StatusException('Operation not allowed. This board is archived.');
 		}
 		$card = $this->cardMapper->find($id);
+		$this->checkDependencies($card);
 		$changes = new ChangeSet($card);
 		$card->setDone(new \DateTime());
 		$newCard = $this->cardMapper->update($card);
@@ -749,5 +757,25 @@ class CardService {
 
 		[$card] = $this->enrichCards([$card]);
 		return $card;
+	}
+
+	/**
+	 * Check if all dependent cards are marked as done.
+	 *
+	 * @throws BadRequestException
+	 */
+	private function checkDependencies(Card $card): void {
+		$dependentIds = $card->getDependentCards();
+		if ($dependentIds === null) {
+			$dependencies = $this->cardMapper->findDependenciesForCards([$card->getId()]);
+			$dependentIds = $dependencies[$card->getId()] ?? [];
+		}
+		foreach ($dependentIds as $depId) {
+			$depCard = $this->cardMapper->find($depId);
+			if ($depCard->getDeletedAt() === 0 && $depCard->getDone() === null) {
+				$l10n = $this->l10n ?? \OCP\Server::get(\OCP\L10N\IFactory::class)->get('deck');
+				throw new BadRequestException($l10n->t('Not all dependent cards are done.'));
+			}
+		}
 	}
 }

@@ -89,6 +89,7 @@ import CardMenu from './CardMenu.vue'
 import CardCover from './CardCover.vue'
 import DueDate from './badges/DueDate.vue'
 import { getCurrentUser } from '@nextcloud/auth'
+import { showError } from '../../helpers/errors.js'
 
 const TITLE_EDITING_STATE = {
 	OFF: 0,
@@ -138,6 +139,9 @@ export default {
 		...mapGetters([
 			'isArchived',
 		]),
+		hasUnmetDependencies() {
+			return this.$store.getters.hasUnmetDependencies(this.card)
+		},
 		board() {
 			return this.$store.getters.boardById(this?.stack?.boardId)
 		},
@@ -277,7 +281,11 @@ export default {
 				this.$store.dispatch('archiveUnarchiveCard', { ...this.card, archived: !this.card.archived })
 				break
 			case 'KeyO':
-				this.$store.dispatch('changeCardDoneStatus', { ...this.card, done: !this.card.done })
+				if (!this.card.done && this.hasUnmetDependencies) {
+					showError(this.t('deck', 'Not all dependent cards are done.'))
+				} else {
+					this.$store.dispatch('changeCardDoneStatus', { ...this.card, done: !this.card.done })
+				}
 				break
 			case 'KeyM':
 				this.$el.querySelector('button.action-item__menutoggle')?.click()
