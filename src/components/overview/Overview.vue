@@ -23,13 +23,11 @@
 					</h3>
 				</div>
 				<div class="dashboard-column__list">
-					<template v-if="columnProps.sort === false">
-						<CardItem v-for="card in filterCards(columnProps.filter)"
-							:id="card.id"
-							:key="card.id" />
-					</template>
-					<template v-else>
-						<CardItem v-for="card in sortCards(filterCards(columnProps.filter))"
+					<template v-for="group in groupedCards(columnProps)">
+						<h4 v-if="group.name" :key="`project-${group.boardId}`" class="dashboard-project-title">
+							{{ group.name }}
+						</h4>
+						<CardItem v-for="card in group.cards"
 							:id="card.id"
 							:key="card.id" />
 					</template>
@@ -46,6 +44,7 @@ import Controls from '../Controls.vue'
 import CardItem from '../cards/CardItem.vue'
 import { mapGetters } from 'vuex'
 import GlobalSearchResults from '../search/GlobalSearchResults.vue'
+import { groupCardsByProject } from '../../helpers/projectGroups.js'
 
 const FILTER_UPCOMING = 'upcoming'
 
@@ -112,7 +111,7 @@ export default {
 				return ''
 			}
 		},
-		...mapGetters(['assignedCardsDashboard']),
+		...mapGetters(['assignedCardsDashboard', 'projectsByBoard']),
 	},
 	watch: {
 		'$route.params.filter'() {
@@ -136,6 +135,10 @@ export default {
 		},
 		filterCards(when) {
 			return this.assignedCardsDashboard[when]
+		},
+		groupedCards(columnProps) {
+			const cards = this.filterCards(columnProps.filter)
+			return groupCardsByProject(columnProps.sort === false ? cards : this.sortCards(cards), this.projectsByBoard)
 		},
 		sortCards(cards) {
 			if (!cards) {
@@ -229,6 +232,12 @@ export default {
 			margin: 0 $margin-x;
 			overflow-y: auto;
 			scrollbar-gutter: stable;
+		}
+
+		.dashboard-project-title {
+			margin: $stack-gap 0 0;
+			font-size: var(--default-font-size);
+			font-weight: bold;
 		}
 	}
 }

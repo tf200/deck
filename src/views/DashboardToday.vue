@@ -4,7 +4,7 @@
 -->
 
 <template>
-	<NcDashboardWidget :items="cards"
+	<NcDashboardWidget :items="items"
 		empty-content-icon="icon-deck"
 		:empty-content-message="t('deck', 'No upcoming cards')"
 		:show-more-text="t('deck', 'upcoming cards today')"
@@ -13,7 +13,10 @@
 		@hide="() => {}"
 		@markDone="() => {}">
 		<template #default="{ item }">
-			<Card :card="item" />
+			<h4 v-if="item.isProjectGroup" class="project-group-title">
+				{{ item.name }}
+			</h4>
+			<Card v-else :card="item" />
 		</template>
 	</NcDashboardWidget>
 </template>
@@ -23,6 +26,7 @@ import { NcDashboardWidget } from '@nextcloud/vue'
 import { mapGetters } from 'vuex'
 import Card from '../components/dashboard/Card.vue'
 import { generateUrl } from '@nextcloud/router'
+import { groupCardsByProject, projectGroupsToItems } from '../helpers/projectGroups.js'
 
 export default {
 	name: 'DashboardToday',
@@ -38,6 +42,7 @@ export default {
 	computed: {
 		...mapGetters([
 			'assignedCardsDashboard',
+			'projectsByBoard',
 		]),
 		cards() {
 			const list = [...this.assignedCardsDashboard.today || []]
@@ -45,6 +50,9 @@ export default {
 				return (new Date(a.duedate)).getTime() - (new Date(b.duedate)).getTime()
 			})
 			return list
+		},
+		items() {
+			return projectGroupsToItems(groupCardsByProject(this.cards, this.projectsByBoard))
 		},
 		showMoreUrl() {
 			return this.cards.length > 7 ? generateUrl('/apps/deck') : null
@@ -63,5 +71,10 @@ export default {
 	#deck-widget-empty-content {
 		text-align: center;
 		margin-top: 5vh;
+	}
+
+	.project-group-title {
+		margin: 8px 8px 0;
+		font-size: var(--default-font-size);
 	}
 </style>
