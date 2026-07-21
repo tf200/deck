@@ -7,6 +7,7 @@
 	<NcModal class="card-selector" @close="close">
 		<CreateNewCardCustomPicker :title="title"
 			:description="description"
+			:board-id="boardId"
 			show-created-notice
 			@cancel="close"
 			@close="close" />
@@ -24,6 +25,10 @@ export default {
 		CreateNewCardCustomPicker,
 	},
 	props: {
+		boardId: {
+			type: [Number, String],
+			default: null,
+		},
 		title: {
 			type: String,
 			default: '',

@@ -5,6 +5,7 @@
 
 import Vue from 'vue'
 import { generateUrl } from '@nextcloud/router'
+import axios from '@nextcloud/axios'
 
 import CardCreateDialog from './CardCreateDialog.vue'
 import { buildSelector } from './helpers/selector.js'
@@ -25,6 +26,18 @@ window.addEventListener('DOMContentLoaded', () => {
 		label: t('deck', 'Create a card'),
 		icon: 'icon-deck',
 		async callback({ message: { message, messageParameters, actorDisplayName }, metadata: { name: conversationName, token: conversationToken } }) {
+			let boardId = null
+			try {
+				const response = await axios.get(generateUrl(`/apps/projectcreatoraio/api/v1/projects/talk/${encodeURIComponent(conversationToken)}`), {
+					headers: {
+						'OCS-APIRequest': 'true',
+					},
+				})
+				boardId = response.data?.boardId ?? null
+			} catch {
+				// The conversation is not associated with a ProjectCreator project.
+			}
+
 			const parsedMessage = message.replace(/{[a-z0-9-_]+}/gi, function(parameter) {
 				const parameterName = parameter.substr(1, parameter.length - 2)
 
@@ -50,6 +63,7 @@ window.addEventListener('DOMContentLoaded', () => {
 				await buildSelector(CardCreateDialog, {
 					props: {
 						title: shortenedMessage,
+						boardId,
 						description: parsedMessage + '\n\n' + '['
 							+ t('deck', 'Message from {author} in {conversationName}', {
 								author: actorDisplayName,

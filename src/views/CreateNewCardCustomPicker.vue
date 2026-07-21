@@ -22,7 +22,7 @@
 					<NcSelect v-model="selectedBoard"
 						:placeholder="t('deck', 'Select a board')"
 						:options="boards"
-						:disabled="loading"
+						:disabled="loading || boardId !== null"
 						label="title"
 						class="selector-wrapper--selector multiselect-board"
 						@option:selected="onSelectBoard">
@@ -158,6 +158,10 @@ export default {
 	},
 	mixins: [Color],
 	props: {
+		boardId: {
+			type: [Number, String],
+			default: null,
+		},
 		showCreatedNotice: {
 			type: Boolean,
 			default: false,
@@ -228,7 +232,11 @@ export default {
 					return board?.permissions?.PERMISSION_EDIT && !board?.archived && !board?.deletedAt
 				})
 				this.loading = false
-				this.preSelectBoard()
+				if (this.boardId !== null) {
+					this.preSelectLockedBoard()
+				} else {
+					this.preSelectBoard()
+				}
 			})
 		},
 		async fetchBoardDetails(board) {
@@ -313,6 +321,14 @@ export default {
 			if (preSelectedBoard) {
 				this.selectedBoard = preSelectedBoard
 				this.onSelectBoard(preSelectedBoard)
+			}
+		},
+		preSelectLockedBoard() {
+			const lockedBoard = this.boards.find(item => String(item.id) === String(this.boardId))
+
+			if (lockedBoard) {
+				this.selectedBoard = lockedBoard
+				this.onSelectBoard(lockedBoard)
 			}
 		},
 		preSelectStack() {
