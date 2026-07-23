@@ -295,13 +295,33 @@ class CardMapper extends QBMapper implements IPermissionMapper {
 			->from('deck_cards', 'c')
 			->innerJoin('c', 'deck_stacks', 's', 's.id = c.stack_id')
 			->innerJoin('s', 'deck_boards', 'b', 'b.id = s.board_id')
-			->where($qb->expr()->eq('board_id', $qb->createNamedParameter($boardId, IQueryBuilder::PARAM_INT)))
-			->andWhere($qb->expr()->eq('archived', $qb->createNamedParameter(false, IQueryBuilder::PARAM_BOOL)))
+			->where($qb->expr()->eq('s.board_id', $qb->createNamedParameter($boardId, IQueryBuilder::PARAM_INT)))
+			->andWhere($qb->expr()->eq('c.archived', $qb->createNamedParameter(false, IQueryBuilder::PARAM_BOOL)))
+			->andWhere($qb->expr()->eq('c.deleted_at', $qb->createNamedParameter(0, IQueryBuilder::PARAM_INT)))
+			->andWhere($qb->expr()->eq('s.deleted_at', $qb->createNamedParameter(0, IQueryBuilder::PARAM_INT)))
+			->andWhere($qb->expr()->eq('b.archived', $qb->createNamedParameter(false, IQueryBuilder::PARAM_BOOL)))
+			->andWhere($qb->expr()->eq('b.deleted_at', $qb->createNamedParameter(0, IQueryBuilder::PARAM_INT)))
 			->setMaxResults($limit)
 			->setFirstResult($offset)
-			->orderBy('c.lastmodified')
-			->addOrderBy('c.id');
+			->orderBy('c.last_modified', 'DESC')
+			->addOrderBy('c.id', 'DESC');
 		return $this->findEntities($qb);
+	}
+
+	public function countByBoardId(int $boardId): int {
+		$qb = $this->db->getQueryBuilder();
+		$qb->selectAlias($qb->func()->count('c.id'), 'card_count')
+			->from('deck_cards', 'c')
+			->innerJoin('c', 'deck_stacks', 's', 's.id = c.stack_id')
+			->innerJoin('s', 'deck_boards', 'b', 'b.id = s.board_id')
+			->where($qb->expr()->eq('s.board_id', $qb->createNamedParameter($boardId, IQueryBuilder::PARAM_INT)))
+			->andWhere($qb->expr()->eq('c.archived', $qb->createNamedParameter(false, IQueryBuilder::PARAM_BOOL)))
+			->andWhere($qb->expr()->eq('c.deleted_at', $qb->createNamedParameter(0, IQueryBuilder::PARAM_INT)))
+			->andWhere($qb->expr()->eq('s.deleted_at', $qb->createNamedParameter(0, IQueryBuilder::PARAM_INT)))
+			->andWhere($qb->expr()->eq('b.archived', $qb->createNamedParameter(false, IQueryBuilder::PARAM_BOOL)))
+			->andWhere($qb->expr()->eq('b.deleted_at', $qb->createNamedParameter(0, IQueryBuilder::PARAM_INT)));
+
+		return (int)$qb->executeQuery()->fetchOne();
 	}
 
 	/**
