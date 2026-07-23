@@ -127,20 +127,24 @@ export default {
 		flex: 1;
 		min-width: 0;
 		padding: 2px;
+		gap: 2px;
 		border-radius: var(--border-radius-pill);
 		background: var(--color-background-dark);
+		box-sizing: border-box;
 	}
 
 	.range-filter__button {
-		flex: 1;
+		flex: 1 1 0%;
 		min-width: 0;
 		min-height: 30px;
+		margin: 0;
 		padding: 4px 6px;
 		border: 0;
 		border-radius: var(--border-radius-pill);
 		background: transparent;
 		color: var(--color-text-maxcontrast);
 		white-space: nowrap;
+		box-sizing: border-box;
 
 		&:hover,
 		&:focus-visible {
