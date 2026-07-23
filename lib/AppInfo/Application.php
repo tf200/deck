@@ -12,6 +12,8 @@ use OCA\Circles\Events\CircleDestroyedEvent;
 use OCA\Deck\Capabilities;
 use OCA\Deck\Collaboration\Resources\ResourceProvider;
 use OCA\Deck\Collaboration\Resources\ResourceProviderCard;
+use OCA\Deck\Dashboard\DeckWidgetNoDue;
+use OCA\Deck\Dashboard\DeckWidgetOverdue;
 use OCA\Deck\Dashboard\DeckWidgetToday;
 use OCA\Deck\Dashboard\DeckWidgetTomorrow;
 use OCA\Deck\Dashboard\DeckWidgetUpcoming;
@@ -137,6 +139,8 @@ class Application extends App implements IBootstrap {
 		$context->registerDashboardWidget(DeckWidgetUpcoming::class);
 		$context->registerDashboardWidget(DeckWidgetToday::class);
 		$context->registerDashboardWidget(DeckWidgetTomorrow::class);
+		$context->registerDashboardWidget(DeckWidgetOverdue::class);
+		$context->registerDashboardWidget(DeckWidgetNoDue::class);
 
 		$context->registerReferenceProvider(CreateCardReferenceProvider::class);
 

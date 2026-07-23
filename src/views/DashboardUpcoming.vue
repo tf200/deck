@@ -5,10 +5,25 @@
 
 <template>
 	<div>
+		<div class="dashboard-controls">
+			<div class="range-filter" role="group" :aria-label="t('deck', 'Upcoming card range')">
+				<button v-for="filter in filters"
+					:key="filter.days"
+					type="button"
+					class="range-filter__button"
+					:class="{ 'range-filter__button--active': selectedDays === filter.days }"
+					:aria-pressed="selectedDays === filter.days"
+					@click="selectedDays = filter.days">
+					{{ filter.label }}
+				</button>
+			</div>
+			<span class="total-count">{{ t('deck', 'Total: {count}', { count: totalCount }) }}</span>
+		</div>
 		<NcDashboardWidget :items="items"
 			empty-content-icon="icon-deck"
 			:empty-content-message="t('deck', 'No upcoming cards')"
 			:show-more-text="t('deck', 'upcoming cards')"
+			:show-more-url="showMoreUrl"
 			:loading="loading"
 			@hide="() => {}"
 			@markDone="() => {}">
@@ -41,6 +56,7 @@ import Card from '../components/dashboard/Card.vue'
 import { generateUrl } from '@nextcloud/router'
 import CreateNewCardCustomPicker from './CreateNewCardCustomPicker.vue'
 import { groupCardsByProject, projectGroupsToItems } from '../helpers/projectGroups.js'
+import { getUpcomingCards } from '../helpers/dashboardCards.js'
 
 export default {
 	name: 'DashboardUpcoming',
@@ -56,6 +72,7 @@ export default {
 		return {
 			loading: false,
 			showAddCardModal: false,
+			selectedDays: 7,
 		}
 	},
 	computed: {
@@ -63,21 +80,24 @@ export default {
 			'assignedCardsDashboard',
 			'projectsByBoard',
 		]),
+		filters() {
+			return [
+				{ days: 7, label: t('deck', 'Next 7 days') },
+				{ days: 30, label: t('deck', '30 days') },
+				{ days: 90, label: t('deck', '3 months') },
+			]
+		},
 		cards() {
-			const list = Object.values(this.assignedCardsDashboard).flat()
-				.filter((card) => {
-					return card.duedate !== null
-				})
-			list.sort((a, b) => {
-				return (new Date(a.duedate)).getTime() - (new Date(b.duedate)).getTime()
-			})
-			return list.slice(0, 5)
+			return getUpcomingCards(this.assignedCardsDashboard, this.selectedDays)
+		},
+		totalCount() {
+			return this.cards.length
 		},
 		items() {
-			return projectGroupsToItems(groupCardsByProject(this.cards, this.projectsByBoard))
+			return projectGroupsToItems(groupCardsByProject(this.cards.slice(0, 5), this.projectsByBoard))
 		},
 		showMoreUrl() {
-			return this.cards.length > 7 ? generateUrl('/apps/deck') : null
+			return this.cards.length > 5 ? generateUrl('/apps/deck') : null
 		},
 	},
 	beforeMount() {
@@ -95,6 +115,64 @@ export default {
 </script>
 
 <style lang="scss" scoped>
+	.dashboard-controls {
+		display: flex;
+		align-items: center;
+		gap: 8px;
+		padding: 0 8px 8px;
+	}
+
+	.range-filter {
+		display: flex;
+		flex: 1;
+		min-width: 0;
+		padding: 2px;
+		border-radius: var(--border-radius-pill);
+		background: var(--color-background-dark);
+	}
+
+	.range-filter__button {
+		flex: 1;
+		min-width: 0;
+		min-height: 30px;
+		padding: 4px 6px;
+		border: 0;
+		border-radius: var(--border-radius-pill);
+		background: transparent;
+		color: var(--color-text-maxcontrast);
+		white-space: nowrap;
+
+		&:hover,
+		&:focus-visible {
+			background: var(--color-background-hover);
+			color: var(--color-main-text);
+		}
+	}
+
+	.range-filter__button--active {
+		background: var(--color-primary-element);
+		color: var(--color-primary-element-text);
+		font-weight: 600;
+
+		&:hover,
+		&:focus-visible {
+			background: var(--color-primary-element-hover);
+			color: var(--color-primary-element-text);
+		}
+	}
+
+	.total-count {
+		display: inline-flex;
+		align-items: center;
+		justify-content: center;
+		min-width: 30px;
+		height: 30px;
+		padding: 0 8px;
+		border-radius: var(--border-radius-pill);
+		background: var(--color-background-dark);
+		font-weight: 600;
+	}
+
 	.center-button {
 		display: flex;
 		align-items: center;

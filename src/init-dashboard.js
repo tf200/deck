@@ -73,4 +73,34 @@ document.addEventListener('DOMContentLoaded', () => {
 		}).$mount(el)
 		return vm
 	})
+
+	OCA.Dashboard.register('deckOverdue', async (el) => {
+		const { Vue, store } = await getAsyncImports()
+		const { default: DashboardBucket } = await import('./views/DashboardBucket.vue')
+		const View = Vue.extend(DashboardBucket)
+		const vm = new View({
+			propsData: {
+				bucket: 'overdue',
+				emptyContentMessage: t('deck', 'No overdue cards'),
+				showMoreText: t('deck', 'overdue cards'),
+			},
+			store,
+		}).$mount(el)
+		return vm
+	})
+
+	OCA.Dashboard.register('deckNoDue', async (el) => {
+		const { Vue, store } = await getAsyncImports()
+		const { default: DashboardBucket } = await import('./views/DashboardBucket.vue')
+		const View = Vue.extend(DashboardBucket)
+		const vm = new View({
+			propsData: {
+				bucket: 'nodue',
+				emptyContentMessage: t('deck', 'No cards without a due date'),
+				showMoreText: t('deck', 'cards without a due date'),
+			},
+			store,
+		}).$mount(el)
+		return vm
+	})
 })
