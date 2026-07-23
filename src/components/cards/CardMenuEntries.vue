@@ -35,7 +35,7 @@
 			@click="unassignCardFromMe()">
 			{{ t('deck', 'Unassign myself') }}
 		</NcActionButton>
-		<NcActionButton v-if="canEdit"
+		<NcActionButton v-if="canEdit && !completionByStack"
 			icon="icon-checkmark"
 			:close-after-click="true"
 			:disabled="(isInDoneColumn && !!card.done) || (!card.done && hasUnmetDependencies)"
@@ -130,6 +130,10 @@ export default {
 		},
 		isInDoneColumn() {
 			return this.stackById(this.card.stackId)?.isDoneColumn === true
+		},
+		completionByStack() {
+			return this.boardById(this.boardId)?.completionByStack === true
+				|| (this.currentBoard?.id === this.boardId && this.currentBoard.completionByStack === true)
 		},
 		hasUnmetDependencies() {
 			return this.$store.getters.hasUnmetDependencies(this.card)

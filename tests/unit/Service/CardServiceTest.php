@@ -480,6 +480,51 @@ class CardServiceTest extends TestCase {
 		$this->expectException(StatusException::class);
 		$actual = $this->cardService->reorder(123, 234, 1);
 	}
+
+	public function testReorderIntoDoneColumnMarksCardDone(): void {
+		$card = new Card();
+		$card->setId(42);
+		$card->setStackId(10);
+		$card->setDependentCards([]);
+		$doneStack = new Stack();
+		$doneStack->setId(20);
+		$doneStack->setIsDoneColumn(true);
+
+		$this->cardMapper->method('find')->with(42)->willReturn($card);
+		$this->cardMapper->method('findAll')->with(20)->willReturn([$card]);
+		$this->stackMapper->method('find')->with(20)->willReturn($doneStack);
+
+		$this->cardService->reorder(42, 20, 0);
+
+		$this->assertNotNull($card->getDone());
+		$this->assertSame(20, $card->getStackId());
+	}
+
+	public function testReorderOutOfDoneColumnMarksCardNotDone(): void {
+		$card = new Card();
+		$card->setId(42);
+		$card->setStackId(20);
+		$card->setDone(new \DateTime());
+		$targetStack = new Stack();
+		$targetStack->setId(10);
+		$targetStack->setIsDoneColumn(false);
+		$doneStack = new Stack();
+		$doneStack->setId(20);
+		$doneStack->setIsDoneColumn(true);
+
+		$this->cardMapper->method('find')->with(42)->willReturn($card);
+		$this->cardMapper->method('findAll')->with(10)->willReturn([$card]);
+		$this->stackMapper->method('find')->willReturnMap([
+			[10, $targetStack],
+			[20, $doneStack],
+		]);
+
+		$this->cardService->reorder(42, 10, 0);
+
+		$this->assertNull($card->getDone());
+		$this->assertSame(10, $card->getStackId());
+	}
+
 	public function testArchive() {
 		$card = new Card();
 		$this->assertFalse($card->getArchived());

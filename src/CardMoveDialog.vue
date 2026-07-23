@@ -95,9 +95,10 @@ export default {
 		async moveCard() {
 			this.copiedCard = Object.assign({}, this.card)
 			this.copiedCard.stackId = this.selectedStack.id
-			this.$store.dispatch('moveCard', { card: this.copiedCard, oldBoardId: this.selectedBoard.id })
-			if (parseInt(this.selectedBoard.id) === parseInt(this.selectedStack.boardId)) {
-				await this.$store.commit('addNewCard', { ...this.copiedCard })
+			const sourceBoardId = this.stackById(this.card.stackId).boardId
+			const updatedCard = await this.$store.dispatch('moveCard', { card: this.copiedCard, oldBoardId: sourceBoardId })
+			if (parseInt(sourceBoardId) === parseInt(this.selectedStack.boardId)) {
+				this.$store.commit('addNewCard', updatedCard)
 			}
 			this.modalShow = false
 		},

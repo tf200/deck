@@ -307,6 +307,7 @@ export default function cardModuleFactory() {
 			async moveCard({ commit }, { card, oldBoardId }) {
 				const updatedCard = await apiClient.updateCard(card, oldBoardId)
 				commit('deleteCard', updatedCard)
+				return updatedCard
 			},
 			async reorderCard({ commit, getters, dispatch }, card) {
 				let i = 0
@@ -348,7 +349,7 @@ export default function cardModuleFactory() {
 				const updatedCard = await apiClient[call](card)
 				commit('updateCard', updatedCard)
 			},
-			async changeCardDoneStatus({ commit, dispatch, rootState }, card) {
+			async changeCardDoneStatus({ commit }, card) {
 				let call = 'markCardAsDone'
 				if (card.done === false) {
 					call = 'markCardAsUndone'
@@ -357,16 +358,6 @@ export default function cardModuleFactory() {
 				try {
 					const updatedCard = await apiClient[call](card)
 					commit('updateCardProperty', { property: 'done', card: updatedCard })
-
-					if (card.done !== false) {
-						const cardStack = rootState.stack.stacks.find(s => s.id === card.stackId)
-						const doneStack = rootState.stack.stacks.find(
-							s => s.boardId === cardStack?.boardId && s.isDoneColumn,
-						)
-						if (doneStack && card.stackId !== doneStack.id) {
-							await dispatch('reorderCard', { ...updatedCard, stackId: doneStack.id, order: 0 })
-						}
-					}
 				} catch (err) {
 					showError(err)
 					throw err

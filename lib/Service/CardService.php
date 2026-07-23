@@ -261,6 +261,8 @@ class CardService {
 			throw new StatusException('Operation not allowed. This board is archived.');
 		}
 		$card = $this->cardMapper->find($id);
+		$projectPolicyService = $this->getProjectPolicyService();
+		$usesStackCompletion = $projectPolicyService?->usesStackCompletion($card) === true;
 		if ($archived !== null && $card->getArchived() && $archived === true) {
 			throw new StatusException('Operation not allowed. This card is archived.');
 		}
@@ -310,22 +312,22 @@ class CardService {
 		if ($archived !== null) {
 			$card->setArchived($archived);
 		}
-		if ($done !== null) {
+		if (!$usesStackCompletion && $done !== null) {
 			if ($done->getValue() !== null && $changes->getBefore()->getDone() === null) {
 				$this->checkDependencies($card);
 			}
 			$card->setDone($done->getValue());
-		} else {
+		} elseif (!$usesStackCompletion && $done === null) {
 			$card->setDone(null);
 		}
 
-		if (class_exists('\OCA\ProjectCreatorAIO\Service\CardPolicyService')) {
-			$policyService = \OCP\Server::get(\OCA\ProjectCreatorAIO\Service\CardPolicyService::class);
-			$policyService->assertTransition($changes->getBefore(), $stackId, $this->userId);
+		if ($projectPolicyService !== null) {
+			$projectPolicyService->assertTransition($changes->getBefore(), $stackId, $this->userId);
 			if ($done !== null && ($changes->getBefore()->getDone() === null) !== ($done->getValue() === null)) {
-				$policyService->assertAction($card, 'verify', $this->userId);
+				$projectPolicyService->assertAction($card, 'verify', $this->userId);
 			}
 		}
+		$this->applyStackCompletionTransition($card, $changes->getBefore()->getStackId(), $stackId);
 
 		// Trigger update events before setting description as it is handled separately
 		$changes->setAfter($card);
@@ -460,28 +462,15 @@ class CardService {
 		if ($card->getArchived()) {
 			throw new StatusException('Operation not allowed. This card is archived.');
 		}
-		if (class_exists('\OCA\ProjectCreatorAIO\Service\CardPolicyService')) {
-			$policyService = \OCP\Server::get(\OCA\ProjectCreatorAIO\Service\CardPolicyService::class);
-			$policyService->assertTransition($card, $stackId, $this->userId);
+		$projectPolicyService = $this->getProjectPolicyService();
+		if ($projectPolicyService !== null) {
+			$projectPolicyService->assertTransition($card, $stackId, $this->userId);
 		}
 		$changes = new ChangeSet($card);
 		$oldStackId = $card->getStackId();
 		$card->setStackId($stackId);
 
-		if ($stackId !== $oldStackId) {
-			$newStack = $this->stackMapper->find($stackId);
-			if ($newStack->getIsDoneColumn()) {
-				if ($card->getDone() === null) {
-					$this->checkDependencies($card);
-				}
-				$card->setDone(new \DateTime());
-			} else {
-				$oldStack = $this->stackMapper->find($oldStackId);
-				if ($oldStack->getIsDoneColumn()) {
-					$card->setDone(null);
-				}
-			}
-		}
+		$this->applyStackCompletionTransition($card, $oldStackId, $stackId);
 
 		$this->cardMapper->update($card);
 		$changes->setAfter($card);
@@ -582,6 +571,9 @@ class CardService {
 			throw new StatusException('Operation not allowed. This board is archived.');
 		}
 		$card = $this->cardMapper->find($id);
+		if ($this->getProjectPolicyService()?->usesStackCompletion($card) === true) {
+			throw new NoPermissionException('Move this card to the Done list to mark it as done.');
+		}
 		$this->checkDependencies($card);
 		$changes = new ChangeSet($card);
 		$card->setDone(new \DateTime());
@@ -619,6 +611,9 @@ class CardService {
 			throw new StatusException('Operation not allowed. This board is archived.');
 		}
 		$card = $this->cardMapper->find($id);
+		if ($this->getProjectPolicyService()?->usesStackCompletion($card) === true) {
+			throw new NoPermissionException('Move this card out of the Done list to mark it as not done.');
+		}
 		$changes = new ChangeSet($card);
 		$card->setDone(null);
 		$newCard = $this->cardMapper->update($card);
@@ -628,6 +623,39 @@ class CardService {
 		$this->eventDispatcher->dispatchTyped(new CardUpdatedEvent($card, $changes->getBefore()));
 
 		return $newCard;
+	}
+
+	private function getProjectPolicyService(): ?object {
+		if (!class_exists('\OCA\ProjectCreatorAIO\Service\CardPolicyService')) {
+			return null;
+		}
+
+		try {
+			return \OCP\Server::get(\OCA\ProjectCreatorAIO\Service\CardPolicyService::class);
+		} catch (\Throwable $e) {
+			$this->logger->debug('Project card policy integration is unavailable', ['exception' => $e]);
+			return null;
+		}
+	}
+
+	private function applyStackCompletionTransition(Card $card, int $oldStackId, int $newStackId): void {
+		if ($newStackId === $oldStackId) {
+			return;
+		}
+
+		$newStack = $this->stackMapper->find($newStackId);
+		if ($newStack->getIsDoneColumn()) {
+			if ($card->getDone() === null) {
+				$this->checkDependencies($card);
+				$card->setDone(new \DateTime());
+			}
+			return;
+		}
+
+		$oldStack = $this->stackMapper->find($oldStackId);
+		if ($oldStack->getIsDoneColumn()) {
+			$card->setDone(null);
+		}
 	}
 
 	/**
