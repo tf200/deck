@@ -83,17 +83,26 @@ class Board extends RelationalEntity {
 		try {
 			$db = \OCP\Server::get(\OCP\IDBConnection::class);
 			$qb = $db->getQueryBuilder();
-			$qb->select('p.type', 's.done_stack_id')
+			$qb->select('p.type')
 				->from('custom_projects', 'p')
-				->leftJoin('p', 'pc_board_policy_settings', 's', $qb->expr()->eq('s.board_id', 'p.board_id'))
-				->where($qb->expr()->eq('p.board_id', $qb->createNamedParameter((int)$this->getId(), \OCP\DB\QueryBuilder\IQueryBuilder::PARAM_INT)));
+				->where($qb->expr()->eq('p.board_id', $qb->createNamedParameter((string)$this->getId())));
 			$res = $qb->executeQuery();
 			$row = $res->fetch();
 			$res->closeCursor();
+			$doneStackId = null;
+			if ($row !== false) {
+				$qb = $db->getQueryBuilder();
+				$qb->select('done_stack_id')
+					->from('pc_board_policy_settings')
+					->where($qb->expr()->eq('board_id', $qb->createNamedParameter((int)$this->getId(), \OCP\DB\QueryBuilder\IQueryBuilder::PARAM_INT)));
+				$res = $qb->executeQuery();
+				$doneStackId = $res->fetchOne();
+				$res->closeCursor();
+			}
 			$json['isProjectBoard'] = !empty($row);
 			$json['projectType'] = isset($row['type']) ? (int)$row['type'] : null;
-			$json['completionByStack'] = isset($row['type'], $row['done_stack_id']) && (int)$row['type'] === 0;
-			$json['doneStackId'] = isset($row['done_stack_id']) ? (int)$row['done_stack_id'] : null;
+			$json['completionByStack'] = isset($row['type']) && $doneStackId !== false && $doneStackId !== null && (int)$row['type'] === 0;
+			$json['doneStackId'] = $doneStackId !== false && $doneStackId !== null ? (int)$doneStackId : null;
 		} catch (\Throwable $e) {
 			$json['isProjectBoard'] = false;
 			$json['projectType'] = null;
