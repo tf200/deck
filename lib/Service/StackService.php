@@ -20,7 +20,6 @@ use OCA\Deck\Db\LabelMapper;
 use OCA\Deck\Db\Stack;
 use OCA\Deck\Db\StackMapper;
 use OCA\Deck\Event\BoardUpdatedEvent;
-use OCA\Deck\Model\CardDetails;
 use OCA\Deck\NoPermissionException;
 use OCA\Deck\StatusException;
 use OCA\Deck\Validators\StackServiceValidator;
@@ -75,22 +74,7 @@ class StackService {
 		$stack = $this->stackMapper->find($stackId);
 
 		$allCards = $this->cardMapper->findAll($stackId);
-		$cardIds = array_map(fn (Card $card) => $card->getId(), $allCards);
-		$attachmentCounts = $this->attachmentService->countForCards($cardIds);
-		$assignedUsers = $this->assignedUsersMapper->findIn($cardIds);
-
-		$cards = array_map(
-			function (Card $card) use ($attachmentCounts, $assignedUsers): CardDetails {
-				$cardAssignedUsers = array_values(array_filter($assignedUsers, fn ($a) => $a->getCardId() === $card->getId()));
-				$card->setAssignedUsers($cardAssignedUsers);
-				$card->setAttachmentCount($attachmentCounts[$card->getId()] ?? 0);
-
-				return new CardDetails($card);
-			},
-			$allCards
-		);
-
-		$stack->setCards($cards);
+		$stack->setCards($this->cardService->enrichCards($allCards));
 
 		return $stack;
 	}
@@ -159,7 +143,7 @@ class StackService {
 		$attachmentCounts = $this->attachmentService->countForCards($allArchivedCardIds);
 
 		foreach ($stacks as $stackIndex => $stack) {
-			$cards = $cardsByStackId[$stack->getId()] ?? [];
+			$cards = $this->cardService->filterVisibleCards($cardsByStackId[$stack->getId()] ?? []);
 			foreach ($cards as $cardIndex => $card) {
 				if (array_key_exists($card->id, $labels)) {
 					$cards[$cardIndex]->setLabels($labels[$card->id]);

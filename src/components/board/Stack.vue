@@ -106,7 +106,7 @@
 			non-drag-area-selector=".dragDisabled"
 			:drag-handle-selector="dragHandleSelector"
 			data-dragscroll-enabled
-			@should-accept-drop="canEdit"
+			:should-accept-drop="shouldAcceptCardDrop"
 			@drag-start="draggingCard = true"
 			@drag-end="draggingCard = false"
 			@drop="($event) => onDropCard(stack.id, $event)">
@@ -156,6 +156,7 @@ import { NcActions, NcActionButton, NcModal } from '@nextcloud/vue'
 import { showError, showUndo } from '@nextcloud/dialogs'
 
 import CardItem from '../cards/CardItem.vue'
+import { canMoveCardToStack } from '../../utils/cardCapabilities.js'
 
 import '@nextcloud/dialogs/style.css'
 
@@ -206,9 +207,12 @@ export default {
 			'canManage',
 			'canEdit',
 			'isArchived',
+			'boardById',
+			'stackById',
 		]),
 		...mapState({
 			showArchived: state => state.showArchived,
+			currentBoard: state => state.currentBoard,
 		}),
 		cardsByStack() {
 			return this.$store.getters.cardsByStack(this.stack.id).filter((card) => {
@@ -250,6 +254,17 @@ export default {
 	},
 
 	methods: {
+		shouldAcceptCardDrop(_sourceContainerOptions, card) {
+			if (!this.canEdit || !card) {
+				return false
+			}
+
+			const sourceStack = this.stackById(card.stackId)
+			const sourceBoard = Number(this.currentBoard?.id) === Number(sourceStack?.boardId)
+				? this.currentBoard
+				: this.boardById(sourceStack?.boardId)
+			return canMoveCardToStack(card, sourceBoard, this.stack.id)
+		},
 		stopCardCreation(e) {
 			// For some reason the submit event triggers a MouseEvent that is bubbling to the outside
 			// so we have to ignore it

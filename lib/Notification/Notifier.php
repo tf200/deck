@@ -7,9 +7,14 @@
 
 namespace OCA\Deck\Notification;
 
+use OCA\Deck\Db\Acl;
 use OCA\Deck\Db\BoardMapper;
 use OCA\Deck\Db\CardMapper;
 use OCA\Deck\Db\StackMapper;
+use OCA\Deck\NoPermissionException;
+use OCA\Deck\Service\PermissionService;
+use OCP\AppFramework\Db\DoesNotExistException;
+use OCP\AppFramework\Db\MultipleObjectsReturnedException;
 use OCP\IURLGenerator;
 use OCP\IUserManager;
 use OCP\L10N\IFactory;
@@ -26,6 +31,7 @@ class Notifier implements INotifier {
 		protected readonly CardMapper $cardMapper,
 		protected readonly StackMapper $stackMapper,
 		protected readonly BoardMapper $boardMapper,
+		protected readonly PermissionService $permissionService,
 	) {
 	}
 
@@ -61,12 +67,26 @@ class Notifier implements INotifier {
 		if ($notification->getApp() !== 'deck' || $notification->getObjectType() === 'activity_notification') {
 			throw new UnknownNotificationException();
 		}
-		$notification->setIcon($this->url->getAbsoluteURL($this->url->imagePath('deck', 'deck-dark.svg')));
 		$params = $notification->getSubjectParameters();
+		$subject = $notification->getSubject();
+		$objectId = (int)$notification->getObjectId();
+		if (in_array($subject, ['card-assigned', 'card-overdue', 'card-comment-mentioned'], true)) {
+			try {
+				$this->permissionService->checkPermission(
+					$this->cardMapper,
+					$objectId,
+					Acl::PERMISSION_READ,
+					$notification->getUser(),
+				);
+			} catch (NoPermissionException|DoesNotExistException|MultipleObjectsReturnedException $e) {
+				throw new AlreadyProcessedException();
+			}
+		}
+		$notification->setIcon($this->url->getAbsoluteURL($this->url->imagePath('deck', 'deck-dark.svg')));
 
-		switch ($notification->getSubject()) {
+		switch ($subject) {
 			case 'card-assigned':
-				$cardId = (int)$notification->getObjectId();
+				$cardId = $objectId;
 				$stack = $this->stackMapper->findStackFromCardId($cardId);
 				$boardId = $stack ? (int)$stack->getBoardId() : null;
 				if (!$boardId) {
@@ -109,7 +129,7 @@ class Notifier implements INotifier {
 				$notification->setLink($this->getCardUrl($boardId, $cardId));
 				break;
 			case 'card-overdue':
-				$cardId = (int)$notification->getObjectId();
+				$cardId = $objectId;
 				$stack = $this->stackMapper->findStackFromCardId($cardId);
 				$boardId = $stack ? (int)$stack->getBoardId() : null;
 				if (!$boardId) {
@@ -141,7 +161,7 @@ class Notifier implements INotifier {
 				$notification->setLink($this->getCardUrl($boardId, $cardId));
 				break;
 			case 'card-comment-mentioned':
-				$cardId = (int)$notification->getObjectId();
+				$cardId = $objectId;
 				$stack = $this->stackMapper->findStackFromCardId($cardId);
 				$boardId = $stack ? (int)$stack->getBoardId() : null;
 				if (!$boardId) {
@@ -181,7 +201,7 @@ class Notifier implements INotifier {
 				$notification->setLink($this->getCardUrl($boardId, $cardId));
 				break;
 			case 'board-shared':
-				$boardId = (int)$notification->getObjectId();
+				$boardId = $objectId;
 				if (!$boardId) {
 					throw new AlreadyProcessedException();
 				}
@@ -213,7 +233,7 @@ class Notifier implements INotifier {
 				$notification->setLink($this->getBoardUrl($boardId));
 				break;
 			case 'remote-board-shared':
-				$boardId = (int)$notification->getObjectId();
+				$boardId = $objectId;
 				if (!$boardId) {
 					throw new AlreadyProcessedException();
 				}

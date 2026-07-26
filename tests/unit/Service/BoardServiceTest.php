@@ -38,11 +38,13 @@ use OCA\Deck\Db\Assignment;
 use OCA\Deck\Db\AssignmentMapper;
 use OCA\Deck\Db\Board;
 use OCA\Deck\Db\BoardMapper;
+use OCA\Deck\Db\Card;
 use OCA\Deck\Db\CardMapper;
 use OCA\Deck\Db\ChangeHelper;
 use OCA\Deck\Db\LabelMapper;
 use OCA\Deck\Db\Session;
 use OCA\Deck\Db\SessionMapper;
+use OCA\Deck\Db\Stack;
 use OCA\Deck\Db\StackMapper;
 use OCA\Deck\Db\User;
 use OCA\Deck\Event\AclCreatedEvent;
@@ -79,6 +81,7 @@ class BoardServiceTest extends TestCase {
 	private $cardMapper;
 	/** @var PermissionService */
 	private $permissionService;
+	private CardAccessPolicyIntegration&MockObject $cardAccessPolicyIntegration;
 	/** @var AssignmentService */
 	private $assignmentService;
 	/** @var NotificationHelper */
@@ -114,6 +117,7 @@ class BoardServiceTest extends TestCase {
 		$this->config = $this->createMock(IConfig::class);
 		$this->labelMapper = $this->createMock(LabelMapper::class);
 		$this->permissionService = $this->createMock(PermissionService::class);
+		$this->cardAccessPolicyIntegration = $this->createMock(CardAccessPolicyIntegration::class);
 		$this->assignmentService = $this->createMock(AssignmentService::class);
 		$this->notificationHelper = $this->createMock(NotificationHelper::class);
 		$this->assignedUsersMapper = $this->createMock(AssignmentMapper::class);
@@ -135,6 +139,7 @@ class BoardServiceTest extends TestCase {
 			$this->labelMapper,
 			$this->aclMapper,
 			$this->permissionService,
+			$this->cardAccessPolicyIntegration,
 			$this->assignmentService,
 			$this->notificationHelper,
 			$this->assignedUsersMapper,
@@ -473,5 +478,77 @@ class BoardServiceTest extends TestCase {
 			->method('dispatchTyped')
 			->with(new AclDeletedEvent($acl));
 		$this->assertEquals($acl, $this->service->deleteAcl(123));
+	}
+
+	public function testExportFiltersCardsByPolicyBeforeEnrichment(): void {
+		$board = new Board();
+		$board->setId(42);
+		$stack = new Stack();
+		$stack->setId(7);
+		$stack->setBoardId(42);
+		$visibleCard = new Card();
+		$visibleCard->setId(10);
+		$visibleCard->setStackId(7);
+		$hiddenCard = new Card();
+		$hiddenCard->setId(11);
+		$hiddenCard->setStackId(7);
+
+		$this->boardMapper->method('find')->with(42)->willReturn($board);
+		$this->stackMapper->method('findAll')->with(42)->willReturn([$stack]);
+		$this->cardMapper->method('findAllForStacks')->with([7])->willReturn([7 => [$visibleCard, $hiddenCard]]);
+		$this->cardAccessPolicyIntegration->expects($this->once())
+			->method('filterVisibleCards')
+			->with([$visibleCard, $hiddenCard], 'admin')
+			->willReturn([$visibleCard]);
+		$this->labelMapper->expects($this->once())
+			->method('findAssignedLabelsForCards')
+			->with([10])
+			->willReturn([]);
+		$this->assignedUsersMapper->expects($this->once())
+			->method('findIn')
+			->with([10])
+			->willReturn([]);
+
+		$result = $this->service->export(42);
+
+		$this->assertSame([$visibleCard], $result->getStacks()[0]->getCards());
+	}
+
+	public function testCloneCardsFiltersCardsByPolicy(): void {
+		$board = new Board();
+		$board->setId(42);
+		$newBoard = new Board();
+		$newBoard->setId(43);
+		$stack = new Stack();
+		$stack->setId(7);
+		$stack->setOrder(1);
+		$newStack = new Stack();
+		$newStack->setId(8);
+		$newStack->setOrder(1);
+		$visibleCard = new Card();
+		$visibleCard->setId(10);
+		$visibleCard->setStackId(7);
+		$visibleCard->setTitle('Visible');
+		$hiddenCard = new Card();
+		$hiddenCard->setId(11);
+		$hiddenCard->setStackId(7);
+		$hiddenCard->setTitle('Hidden');
+
+		$this->stackMapper->expects($this->exactly(2))
+			->method('findAll')
+			->willReturnCallback(static fn (int $boardId): array => $boardId === 42 ? [$stack] : [$newStack]);
+		$this->cardMapper->method('findAllForStacks')->with([7])->willReturn([7 => [$visibleCard]]);
+		$this->cardMapper->method('findAllArchivedForStacks')->with([7])->willReturn([7 => [$hiddenCard]]);
+		$this->cardAccessPolicyIntegration->expects($this->once())
+			->method('filterVisibleCards')
+			->with([$visibleCard, $hiddenCard], 'admin')
+			->willReturn([$visibleCard]);
+		$this->cardMapper->expects($this->once())
+			->method('insert')
+			->with($this->callback(static fn (Card $card): bool => $card->getTitle() === 'Visible'))
+			->willReturnCallback(static fn (Card $card): Card => $card);
+
+		$method = new \ReflectionMethod($this->service, 'cloneCards');
+		$method->invoke($this->service, $board, $newBoard);
 	}
 }

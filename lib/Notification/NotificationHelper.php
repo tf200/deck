@@ -19,6 +19,7 @@ use OCA\Deck\Db\BoardMapper;
 use OCA\Deck\Db\Card;
 use OCA\Deck\Db\CardMapper;
 use OCA\Deck\Db\User;
+use OCA\Deck\NoPermissionException;
 use OCA\Deck\Service\ConfigService;
 use OCA\Deck\Service\PermissionService;
 use OCP\AppFramework\Db\DoesNotExistException;
@@ -63,6 +64,9 @@ class NotificationHelper {
 		$board = $this->getBoard($boardId, false, true);
 		/** @var User $user */
 		foreach ($this->permissionService->findUsers($boardId) as $user) {
+			if (!$this->canReadCard($card->getId(), $user->getUID())) {
+				continue;
+			}
 			$notificationSetting = $this->config->getUserValue($user->getUID(), Application::APP_ID, 'board:' . $boardId . ':notify-due', ConfigService::SETTING_BOARD_NOTIFICATION_DUE_DEFAULT);
 
 			if ($notificationSetting === ConfigService::SETTING_BOARD_NOTIFICATION_DUE_OFF) {
@@ -105,6 +109,9 @@ class NotificationHelper {
 	}
 
 	public function sendCardAssigned(Card $card, string $userId): void {
+		if (!$this->canReadCard($card->getId(), $userId)) {
+			return;
+		}
 		$boardId = $this->cardMapper->findBoardId($card->getId());
 		try {
 			$board = $this->getBoard($boardId);
@@ -198,6 +205,9 @@ class NotificationHelper {
 				// skip users that don't have access to the board
 				continue;
 			}
+			if (!$this->canReadCard($card->getId(), $mentionedUserId)) {
+				continue;
+			}
 			$notification = $this->notificationManager->createNotification();
 			$notification
 				->setApp('deck')
@@ -229,5 +239,14 @@ class NotificationHelper {
 			->setObject('board', (string)$board->getId())
 			->setSubject('board-shared', [$board->getTitle(), $this->userId]);
 		return $notification;
+	}
+
+	private function canReadCard(int $cardId, string $userId): bool {
+		try {
+			$this->permissionService->checkPermission($this->cardMapper, $cardId, Acl::PERMISSION_READ, $userId);
+			return true;
+		} catch (NoPermissionException $e) {
+			return false;
+		}
 	}
 }

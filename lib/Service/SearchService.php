@@ -67,14 +67,19 @@ class SearchService {
 		$matchedComments = $this->cardMapper->searchComments($boardIds, $this->filterStringParser->parse($term), $limit, $cursor);
 
 		$self = $this;
-		return array_map(function ($cardRow) use ($self) {
-			$comment = $this->commentsManager->get($cardRow['comment_id']);
+		$results = array_map(function ($cardRow) use ($self) {
+			$commentId = $cardRow['comment_id'];
 			unset($cardRow['comment_id']);
 			$card = Card::fromRow($cardRow);
 			// TODO: Only perform one enrich call here
-			$self->cardService->enrichCards([$card]);
+			if ($self->cardService->enrichRawCards([$card]) === []) {
+				return null;
+			}
+			$comment = $this->commentsManager->get($commentId);
 			$displayName = $this->userManager->getDisplayName($comment->getActorId()) ?? '';
 			return new CommentSearchResultEntry($comment->getId(), $comment->getMessage(), $displayName, $card, $this->urlGenerator, $this->l10n);
 		}, $matchedComments);
+
+		return array_values(array_filter($results));
 	}
 }

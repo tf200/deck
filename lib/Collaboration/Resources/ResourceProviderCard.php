@@ -11,6 +11,7 @@ use OCA\Deck\Db\Acl;
 use OCA\Deck\Db\Board;
 use OCA\Deck\Db\BoardMapper;
 use OCA\Deck\Db\CardMapper;
+use OCA\Deck\NoPermissionException;
 use OCA\Deck\Service\PermissionService;
 use OCP\AppFramework\Db\DoesNotExistException;
 use OCP\AppFramework\Db\MultipleObjectsReturnedException;
@@ -58,8 +59,11 @@ class ResourceProviderCard implements IProvider {
 	 */
 	public function getResourceRichObject(IResource $resource): array {
 		try {
+			$this->permissionService->checkPermission($this->cardMapper, $resource->getId(), Acl::PERMISSION_READ);
 			$card = $this->cardMapper->find($resource->getId());
 			$board = $this->getBoard($resource->getId());
+		} catch (NoPermissionException $e) {
+			throw new ResourceException('No card found for resource');
 		} catch (DoesNotExistException $e) {
 			throw new ResourceException('No card found for resource');
 		} catch (MultipleObjectsReturnedException $e) {
@@ -93,23 +97,11 @@ class ResourceProviderCard implements IProvider {
 			return false;
 		}
 		try {
-			$board = $this->getBoard($resource->getId());
-		} catch (DoesNotExistException $e) {
-			return false;
-		} catch (MultipleObjectsReturnedException $e) {
-			return false;
-		}
-
-		if ($board === null) {
-			return false;
-		}
-		if ($board->getOwner() === $user->getUID()) {
+			$this->permissionService->checkPermission($this->cardMapper, $resource->getId(), Acl::PERMISSION_READ, $user->getUID());
 			return true;
-		}
-		if ($board->getAcl() === null) {
+		} catch (NoPermissionException|DoesNotExistException|MultipleObjectsReturnedException $e) {
 			return false;
 		}
-		return $this->permissionService->userCan($board->getAcl(), Acl::PERMISSION_READ, $user->getUID());
 	}
 
 	/**

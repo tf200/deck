@@ -34,6 +34,7 @@ use OCA\Deck\Db\CardMapper;
 use OCA\Deck\Db\Label;
 use OCA\Deck\Db\Stack;
 use OCA\Deck\Db\StackMapper;
+use OCA\Deck\NoPermissionException;
 use OCA\Deck\Service\PermissionService;
 use OCP\Activity\IEvent;
 use OCP\Activity\IManager;
@@ -350,6 +351,30 @@ class ActivityManagerTest extends TestCase {
 		$this->manager->expects(self::exactly(2))
 			->method('publish')
 			->with($event);
+		$this->invokePrivate($this->activityManager, 'sendToUsers', [$event]);
+	}
+
+	public function testSendCardActivitySkipsUnreadableUser(): void {
+		$users = [
+			$this->mockUser('visible-user'),
+			$this->mockUser('hidden-user'),
+		];
+		$event = $this->createMock(IEvent::class);
+		$event->method('getObjectType')->willReturn(ActivityManager::DECK_OBJECT_CARD);
+		$event->method('getObjectId')->willReturn(1);
+		$this->cardMapper->expects(self::once())->method('findBoardId')->with(1)->willReturn(123);
+		$this->permissionService->expects(self::once())->method('findUsers')->with(123)->willReturn($users);
+		$this->permissionService->expects(self::exactly(2))
+			->method('checkPermission')
+			->willReturnCallback(function (CardMapper $mapper, int $cardId, int $permission, string $userId): bool {
+				if ($userId === 'hidden-user') {
+					throw new NoPermissionException('Permission denied');
+				}
+				return true;
+			});
+		$event->expects(self::once())->method('setAffectedUser')->with('visible-user')->willReturnSelf();
+		$this->manager->expects(self::once())->method('publish')->with($event);
+
 		$this->invokePrivate($this->activityManager, 'sendToUsers', [$event]);
 	}
 

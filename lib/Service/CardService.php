@@ -43,6 +43,7 @@ class CardService {
 		private LabelMapper $labelMapper,
 		private LabelService $labelService,
 		private PermissionService $permissionService,
+		private CardAccessPolicyIntegration $cardAccessPolicyIntegration,
 		private BoardService $boardService,
 		private NotificationHelper $notificationHelper,
 		private AssignmentMapper $assignedUsersMapper,
@@ -68,10 +69,7 @@ class CardService {
 	 * @return CardDetails[]
 	 */
 	public function enrichCards(array $cards): array {
-		if (class_exists('\OCA\ProjectCreatorAIO\Service\CardPolicyService')) {
-			$policyService = \OCP\Server::get(\OCA\ProjectCreatorAIO\Service\CardPolicyService::class);
-			$cards = $policyService->filterVisibleCards($cards, $this->userId);
-		}
+		$cards = $this->filterVisibleCards($cards);
 		$user = $this->userManager->get($this->userId);
 
 		$allCardIds = array_map(fn (Card $card) => $card->getId(), $cards);
@@ -118,14 +116,26 @@ class CardService {
 		}
 
 		foreach ($cards as $card) {
+			$dependentCardIds = array_values(array_filter(
+				$dependenciesByCard[$card->getId()] ?? [],
+				function (int $dependentCardId): bool {
+					try {
+						$this->permissionService->checkPermission($this->cardMapper, $dependentCardId, Acl::PERMISSION_READ, $this->userId);
+						return true;
+					} catch (NoPermissionException $e) {
+						return false;
+					}
+				},
+			));
 			$card->setLabels($labelsByCard[$card->getId()] ?? []);
 			$card->setAssignedUsers($usersByCard[$card->getId()] ?? []);
-			$card->setDependentCards($dependenciesByCard[$card->getId()] ?? []);
+			$card->setDependentCards($dependentCardIds);
 		}
 
 		return array_map(
 			function (Card $card): CardDetails {
 				$cardDetails = new CardDetails($card);
+				$cardDetails->setCapabilities($this->cardAccessPolicyIntegration->getCapabilities($card, $this->userId));
 
 				$references = $this->referenceManager->extractReferences($card->getTitle());
 				$reference = array_shift($references);
@@ -140,13 +150,38 @@ class CardService {
 		);
 	}
 
+	/**
+	 * @param Card[] $cards
+	 * @return Card[]
+	 */
+	public function filterVisibleCards(array $cards): array {
+		return $this->cardAccessPolicyIntegration->filterVisibleCards($cards, $this->userId);
+	}
+
+	/**
+	 * Enrich and filter cards while preserving callers' raw Card response shape.
+	 *
+	 * @param Card[] $cards
+	 * @return Card[]
+	 */
+	public function enrichRawCards(array $cards): array {
+		$visibleCardIds = array_fill_keys(array_map(
+			static fn (Card $card): int => $card->getId(),
+			$this->enrichCards($cards),
+		), true);
+
+		return array_values(array_filter(
+			$cards,
+			static fn (Card $card): bool => isset($visibleCardIds[$card->getId()]),
+		));
+	}
+
 	/** @return Card[] */
 	public function fetchDeleted($boardId): array {
 		$this->cardServiceValidator->check(compact('boardId'));
 		$this->permissionService->checkPermission($this->boardMapper, $boardId, Acl::PERMISSION_READ);
 		$cards = $this->cardMapper->findDeleted($boardId);
-		$this->enrichCards($cards);
-		return $cards;
+		return $this->enrichRawCards($cards);
 	}
 
 	/**
@@ -182,7 +217,7 @@ class CardService {
 			$this->logger->error('Unable to check permission for a previously obtained board ' . $boardId, ['exception' => $e]);
 			return [];
 		}
-		return $this->cardMapper->findCalendarEntries($boardId);
+		return $this->filterVisibleCards($this->cardMapper->findCalendarEntries($boardId));
 	}
 
 	/**
@@ -261,8 +296,7 @@ class CardService {
 			throw new StatusException('Operation not allowed. This board is archived.');
 		}
 		$card = $this->cardMapper->find($id);
-		$projectPolicyService = $this->getProjectPolicyService();
-		$usesStackCompletion = $projectPolicyService?->usesStackCompletion($card) === true;
+		$usesStackCompletion = $this->cardAccessPolicyIntegration->usesStackCompletion($card);
 		if ($archived !== null && $card->getArchived() && $archived === true) {
 			throw new StatusException('Operation not allowed. This card is archived.');
 		}
@@ -321,11 +355,11 @@ class CardService {
 			$card->setDone(null);
 		}
 
-		if ($projectPolicyService !== null) {
-			$projectPolicyService->assertTransition($changes->getBefore(), $stackId, $this->userId);
-			if ($done !== null && ($changes->getBefore()->getDone() === null) !== ($done->getValue() === null)) {
-				$projectPolicyService->assertAction($card, 'verify', $this->userId);
-			}
+		if ($changes->getBefore()->getStackId() !== $stackId) {
+			$this->cardAccessPolicyIntegration->assertTransition($changes->getBefore(), $stackId, $this->userId);
+		}
+		if (!$usesStackCompletion && $done !== null && ($changes->getBefore()->getDone() === null) !== ($done->getValue() === null)) {
+			$this->cardAccessPolicyIntegration->assertAction($card, 'verify', $this->userId);
 		}
 		$this->applyStackCompletionTransition($card, $changes->getBefore()->getStackId(), $stackId);
 
@@ -462,10 +496,7 @@ class CardService {
 		if ($card->getArchived()) {
 			throw new StatusException('Operation not allowed. This card is archived.');
 		}
-		$projectPolicyService = $this->getProjectPolicyService();
-		if ($projectPolicyService !== null) {
-			$projectPolicyService->assertTransition($card, $stackId, $this->userId);
-		}
+		$this->cardAccessPolicyIntegration->assertTransition($card, $stackId, $this->userId);
 		$changes = new ChangeSet($card);
 		$oldStackId = $card->getStackId();
 		$card->setStackId($stackId);
@@ -501,7 +532,7 @@ class CardService {
 		$this->changeHelper->cardChanged($id, false);
 		$this->eventDispatcher->dispatchTyped(new CardUpdatedEvent($card, $changes->getBefore()));
 
-		return array_values($result);
+		return $this->filterVisibleCards(array_values($result));
 	}
 
 	/**
@@ -571,9 +602,10 @@ class CardService {
 			throw new StatusException('Operation not allowed. This board is archived.');
 		}
 		$card = $this->cardMapper->find($id);
-		if ($this->getProjectPolicyService()?->usesStackCompletion($card) === true) {
+		if ($this->cardAccessPolicyIntegration->usesStackCompletion($card)) {
 			throw new NoPermissionException('Move this card to the Done list to mark it as done.');
 		}
+		$this->cardAccessPolicyIntegration->assertAction($card, 'verify', $this->userId);
 		$this->checkDependencies($card);
 		$changes = new ChangeSet($card);
 		$card->setDone(new \DateTime());
@@ -611,9 +643,10 @@ class CardService {
 			throw new StatusException('Operation not allowed. This board is archived.');
 		}
 		$card = $this->cardMapper->find($id);
-		if ($this->getProjectPolicyService()?->usesStackCompletion($card) === true) {
+		if ($this->cardAccessPolicyIntegration->usesStackCompletion($card)) {
 			throw new NoPermissionException('Move this card out of the Done list to mark it as not done.');
 		}
+		$this->cardAccessPolicyIntegration->assertAction($card, 'verify', $this->userId);
 		$changes = new ChangeSet($card);
 		$card->setDone(null);
 		$newCard = $this->cardMapper->update($card);
@@ -623,19 +656,6 @@ class CardService {
 		$this->eventDispatcher->dispatchTyped(new CardUpdatedEvent($card, $changes->getBefore()));
 
 		return $newCard;
-	}
-
-	private function getProjectPolicyService(): ?object {
-		if (!class_exists('\OCA\ProjectCreatorAIO\Service\CardPolicyService')) {
-			return null;
-		}
-
-		try {
-			return \OCP\Server::get(\OCA\ProjectCreatorAIO\Service\CardPolicyService::class);
-		} catch (\Throwable $e) {
-			$this->logger->debug('Project card policy integration is unavailable', ['exception' => $e]);
-			return null;
-		}
 	}
 
 	private function applyStackCompletionTransition(Card $card, int $oldStackId, int $newStackId): void {

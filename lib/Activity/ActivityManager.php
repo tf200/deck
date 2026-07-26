@@ -446,7 +446,8 @@ class ActivityManager {
 	 * @param IEvent $event
 	 */
 	private function sendToUsers(IEvent $event) {
-		switch ($event->getObjectType()) {
+		$objectType = $event->getObjectType();
+		switch ($objectType) {
 			case self::DECK_OBJECT_BOARD:
 				$mapper = $this->boardMapper;
 				break;
@@ -454,9 +455,17 @@ class ActivityManager {
 				$mapper = $this->cardMapper;
 				break;
 		}
-		$boardId = $mapper->findBoardId($event->getObjectId());
+		$objectId = $event->getObjectId();
+		$boardId = $mapper->findBoardId($objectId);
 		/** @var IUser $user */
 		foreach ($this->permissionService->findUsers($boardId) as $user) {
+			if ($objectType === self::DECK_OBJECT_CARD) {
+				try {
+					$this->permissionService->checkPermission($this->cardMapper, $objectId, Acl::PERMISSION_READ, $user->getUID());
+				} catch (NoPermissionException $e) {
+					continue;
+				}
+			}
 			$event->setAffectedUser($user->getUID());
 			/** @noinspection DisconnectedForeachInstructionInspection */
 			$this->manager->publish($event);

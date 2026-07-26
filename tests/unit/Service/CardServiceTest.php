@@ -37,6 +37,7 @@ use OCA\Deck\Db\LabelMapper;
 use OCA\Deck\Db\Stack;
 use OCA\Deck\Db\StackMapper;
 use OCA\Deck\Model\CardDetails;
+use OCA\Deck\NoPermissionException;
 use OCA\Deck\Notification\NotificationHelper;
 use OCA\Deck\StatusException;
 use OCA\Deck\Validators\CardServiceValidator;
@@ -96,6 +97,16 @@ class CardServiceTest extends TestCase {
 	private $cardServiceValidator;
 	/** @var IReferenceManager|MockObject */
 	private $referenceManager;
+	/** @var CardAccessPolicyIntegration|MockObject */
+	private $cardAccessPolicyIntegration;
+	/** @var null|int[] */
+	private ?array $visibleCardIds = null;
+	/** @var array{canMove: bool, canSign: bool, canVerify: bool} */
+	private array $capabilities = [
+		'canMove' => true,
+		'canSign' => true,
+		'canVerify' => true,
+	];
 
 	/** @var AssignmentService|MockObject */
 	private $assignmentService;
@@ -123,6 +134,20 @@ class CardServiceTest extends TestCase {
 		$this->cardServiceValidator = $this->createMock(CardServiceValidator::class);
 		$this->assignmentService = $this->createMock(AssignmentService::class);
 		$this->referenceManager = $this->createMock(IReferenceManager::class);
+		$this->cardAccessPolicyIntegration = $this->createMock(CardAccessPolicyIntegration::class);
+		$this->cardAccessPolicyIntegration->method('filterVisibleCards')
+			->willReturnCallback(function (array $cards): array {
+				if ($this->visibleCardIds === null) {
+					return $cards;
+				}
+
+				return array_values(array_filter(
+					$cards,
+					fn (Card $card): bool => in_array($card->getId(), $this->visibleCardIds, true),
+				));
+			});
+		$this->cardAccessPolicyIntegration->method('getCapabilities')
+			->willReturnCallback(fn (): array => $this->capabilities);
 
 		$this->logger->expects($this->any())->method('error');
 
@@ -133,6 +158,7 @@ class CardServiceTest extends TestCase {
 			$this->labelMapper,
 			$this->labelService,
 			$this->permissionService,
+			$this->cardAccessPolicyIntegration,
 			$this->boardService,
 			$this->notificationHelper,
 			$this->assignedUsersMapper,
@@ -209,9 +235,93 @@ class CardServiceTest extends TestCase {
 		$cardExpected->setLabels([]);
 		$cardExpected->setDependentCards([]);
 		$expected = new CardDetails($cardExpected);
+		$expected->setCapabilities([
+			'canMove' => true,
+			'canSign' => true,
+			'canVerify' => true,
+		]);
 
 		$actual = $this->cardService->find(123);
 		$this->assertEquals($expected->jsonSerialize(), $actual->jsonSerialize());
+	}
+
+	public function testEnrichCardsSerializesCapabilitiesWithoutMutatingRawCardShape(): void {
+		$card = Card::fromParams(['id' => 1, 'stackId' => 10, 'title' => 'Policy card']);
+		$stack = Stack::fromParams(['id' => 10, 'boardId' => 20]);
+		$board = Board::fromParams(['id' => 20]);
+		$this->userManager->method('get')->willReturn($this->createMock(IUser::class));
+		$this->stackMapper->method('findByIds')->with([10])->willReturn([10 => $stack]);
+		$this->boardService->method('find')->with(20, false)->willReturn($board);
+		$this->capabilities = [
+			'canMove' => false,
+			'canSign' => true,
+			'canVerify' => false,
+		];
+
+		[$enriched] = $this->cardService->enrichCards([$card]);
+
+		$this->assertSame(false, $enriched->jsonSerialize()['canMove']);
+		$this->assertSame(true, $enriched->jsonSerialize()['canSign']);
+		$this->assertSame(false, $enriched->jsonSerialize()['canVerify']);
+		$this->assertArrayNotHasKey('canMove', $card->jsonSerialize());
+		$this->assertArrayNotHasKey('canSign', $card->jsonSerialize());
+		$this->assertArrayNotHasKey('canVerify', $card->jsonSerialize());
+	}
+
+	public function testEnrichCardsFiltersUnreadableDependentCardIds(): void {
+		$card = Card::fromParams(['id' => 1, 'stackId' => 10]);
+		$stack = Stack::fromParams(['id' => 10, 'boardId' => 20]);
+		$this->userManager->method('get')->willReturn($this->createMock(IUser::class));
+		$this->stackMapper->method('findByIds')->with([10])->willReturn([10 => $stack]);
+		$this->boardService->method('find')->with(20, false)->willReturn(Board::fromParams(['id' => 20]));
+		$this->cardMapper->method('findDependenciesForCards')->with([1])->willReturn([1 => [2, 3]]);
+		$this->permissionService->expects($this->exactly(2))
+			->method('checkPermission')
+			->willReturnCallback(function (CardMapper $mapper, int $cardId, int $permission, ?string $userId): bool {
+				if ($cardId === 3) {
+					throw new NoPermissionException('Permission denied');
+				}
+				return true;
+			});
+
+		[$enriched] = $this->cardService->enrichCards([$card]);
+
+		$this->assertSame([2], $enriched->getDependentCards());
+	}
+
+	public function testFetchDeletedFiltersCardsAndPreservesRawShape(): void {
+		$visibleCard = Card::fromParams(['id' => 1, 'stackId' => 10]);
+		$hiddenCard = Card::fromParams(['id' => 2, 'stackId' => 10]);
+		$stack = Stack::fromParams(['id' => 10, 'boardId' => 20]);
+		$board = Board::fromParams(['id' => 20]);
+		$this->visibleCardIds = [1];
+		$this->cardMapper->expects($this->once())
+			->method('findDeleted')
+			->with(20)
+			->willReturn([$visibleCard, $hiddenCard]);
+		$this->userManager->method('get')->willReturn($this->createMock(IUser::class));
+		$this->stackMapper->method('findByIds')->with([10])->willReturn([10 => $stack]);
+		$this->boardService->method('find')->with(20, false)->willReturn($board);
+
+		$actual = $this->cardService->fetchDeleted(20);
+
+		$this->assertSame([$visibleCard], $actual);
+		$this->assertNotInstanceOf(CardDetails::class, $actual[0]);
+	}
+
+	public function testFindCalendarEntriesFiltersCardsWithoutChangingShape(): void {
+		$visibleCard = Card::fromParams(['id' => 1]);
+		$hiddenCard = Card::fromParams(['id' => 2]);
+		$this->visibleCardIds = [1];
+		$this->cardMapper->expects($this->once())
+			->method('findCalendarEntries')
+			->with(20)
+			->willReturn([$visibleCard, $hiddenCard]);
+
+		$actual = $this->cardService->findCalendarEntries(20);
+
+		$this->assertSame([$visibleCard], $actual);
+		$this->assertNotInstanceOf(CardDetails::class, $actual[0]);
 	}
 
 	public function testCreate() {
@@ -348,7 +458,7 @@ class CardServiceTest extends TestCase {
 		$this->assertTrue($cardToBeDeleted->getDeletedAt() <= time(), 'deletedAt is in the past');
 	}
 
-	public function testUpdate() {
+	public function testMetadataUpdateDoesNotAssertTransition(): void {
 		$card = Card::fromParams([
 			'title' => 'Card title',
 			'archived' => 'false',
@@ -368,6 +478,8 @@ class CardServiceTest extends TestCase {
 			->method('find')
 			->with(234)
 			->willReturn($stack);
+		$this->cardAccessPolicyIntegration->expects($this->never())->method('assertTransition');
+		$this->cardAccessPolicyIntegration->expects($this->never())->method('assertAction');
 		$actual = $this->cardService->update(123, 'newtitle', 234, 'text', 'admin', 'foo', 999, '2017-01-01 00:00:00', null, null, null, null, 'ffffff');
 		$this->assertEquals('newtitle', $actual->getTitle());
 		$this->assertEquals(234, $actual->getStackId());
@@ -450,11 +562,27 @@ class CardServiceTest extends TestCase {
 		$card = new Card();
 		$card->setStackId(123);
 		$this->cardMapper->expects($this->once())->method('find')->willReturn($card);
+		$this->cardAccessPolicyIntegration->expects($this->once())
+			->method('assertTransition')
+			->with($card, 123, 'user1');
 		$result = $this->cardService->reorder($cardId, 123, $newPosition);
 		foreach ($result as $card) {
 			$actual[$card->getOrder()] = $card->getId();
 		}
 		$this->assertEquals($order, $actual);
+	}
+
+	public function testReorderFiltersResponseAndPreservesRawCards(): void {
+		$visibleCard = Card::fromParams(['id' => 1, 'stackId' => 10, 'order' => 0]);
+		$hiddenCard = Card::fromParams(['id' => 2, 'stackId' => 10, 'order' => 1]);
+		$this->visibleCardIds = [1];
+		$this->cardMapper->method('find')->with(1)->willReturn($visibleCard);
+		$this->cardMapper->method('findAll')->with(10)->willReturn([$visibleCard, $hiddenCard]);
+
+		$actual = $this->cardService->reorder(1, 10, 0);
+
+		$this->assertSame([$visibleCard], $actual);
+		$this->assertNotInstanceOf(CardDetails::class, $actual[0]);
 	}
 
 	private function getCards() {
@@ -617,9 +745,41 @@ class CardServiceTest extends TestCase {
 			->method('findDoneColumnForBoard')
 			->with(1)
 			->willReturn(null);
+		$this->cardAccessPolicyIntegration->expects($this->once())
+			->method('usesStackCompletion')
+			->with($card)
+			->willReturn(false);
+		$this->cardAccessPolicyIntegration->expects($this->once())
+			->method('assertAction')
+			->with($card, 'verify', 'user1');
 		$result = $this->cardService->done(42);
 		$this->assertNotNull($result->getDone());
 		$this->assertEquals(10, $result->getStackId());
+	}
+
+	public function testUndoneAssertsVerify(): void {
+		$card = new Card();
+		$card->setId(42);
+		$card->setDone(new \DateTime());
+		$this->cardMapper->expects($this->once())
+			->method('find')
+			->with(42)
+			->willReturn($card);
+		$this->cardMapper->expects($this->once())
+			->method('update')
+			->with($card)
+			->willReturn($card);
+		$this->cardAccessPolicyIntegration->expects($this->once())
+			->method('usesStackCompletion')
+			->with($card)
+			->willReturn(false);
+		$this->cardAccessPolicyIntegration->expects($this->once())
+			->method('assertAction')
+			->with($card, 'verify', 'user1');
+
+		$result = $this->cardService->undone(42);
+
+		$this->assertNull($result->getDone());
 	}
 
 	public function testDoneAutoMovesToDoneColumn(): void {

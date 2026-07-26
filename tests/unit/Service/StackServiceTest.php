@@ -148,12 +148,36 @@ class StackServiceTest extends TestCase {
 		}
 	}
 
+	public function testFindUsesFilteredCardDetails(): void {
+		$stack = $this->getStacks()[0];
+		$cards = $this->getCards($stack->getId());
+		$visibleCard = $cards[0];
+		$visibleCardDetails = new CardDetails($visibleCard);
+		$this->stackMapper->expects($this->once())
+			->method('find')
+			->with($stack->getId())
+			->willReturn($stack);
+		$this->cardMapper->expects($this->once())
+			->method('findAll')
+			->with($stack->getId())
+			->willReturn($cards);
+		$this->cardService->expects($this->once())
+			->method('enrichCards')
+			->with($cards)
+			->willReturn([$visibleCardDetails]);
+
+		$actual = $this->stackService->find($stack->getId());
+
+		$this->assertSame([$visibleCardDetails], $actual->getCards());
+	}
+
 	public function testFindAllArchived() {
 		$this->permissionService->expects($this->once())->method('checkPermission');
 		$this->stackMapper->expects($this->once())->method('findAll')->willReturn($this->getStacks());
 		$this->labelMapper->expects($this->once())->method('getAssignedLabelsForBoard')->willReturn($this->getLabels());
 		$this->cardMapper->expects($this->once())->method('findAllArchivedForStacks')->willReturn([222 => $this->getCards(222)]);
 		$this->attachmentService->method('countForCards')->willReturn([]);
+		$this->cardService->method('filterVisibleCards')->willReturnCallback(static fn (array $cards): array => $cards);
 
 		$actual = $this->stackService->findAllArchived(123);
 		for ($stackId = 0; $stackId < 3; $stackId++) {
@@ -163,6 +187,25 @@ class StackServiceTest extends TestCase {
 				$this->assertEquals($actual[0]->getCards()[$cardId]->getLabels(), $this->getLabels()[$cardId]);
 			}
 		}
+	}
+
+	public function testFindAllArchivedFiltersCardsAndPreservesRawShape(): void {
+		$stack = $this->getStacks()[0];
+		$cards = $this->getCards($stack->getId());
+		$visibleCard = $cards[0];
+		$this->stackMapper->method('findAll')->willReturn([$stack]);
+		$this->labelMapper->method('getAssignedLabelsForBoard')->willReturn([]);
+		$this->cardMapper->method('findAllArchivedForStacks')->willReturn([$stack->getId() => $cards]);
+		$this->attachmentService->method('countForCards')->willReturn([]);
+		$this->cardService->expects($this->once())
+			->method('filterVisibleCards')
+			->with($cards)
+			->willReturn([$visibleCard]);
+
+		$actual = $this->stackService->findAllArchived(123);
+
+		$this->assertSame([$visibleCard], $actual[0]->getCards());
+		$this->assertNotInstanceOf(CardDetails::class, $actual[0]->getCards()[0]);
 	}
 
 	private function getLabels() {

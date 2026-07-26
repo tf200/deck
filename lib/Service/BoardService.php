@@ -66,6 +66,7 @@ class BoardService {
 		private LabelMapper $labelMapper,
 		private AclMapper $aclMapper,
 		private PermissionService $permissionService,
+		private CardAccessPolicyIntegration $cardAccessPolicyIntegration,
 		private AssignmentService $assignmentService,
 		private NotificationHelper $notificationHelper,
 		private AssignmentMapper $assignedUsersMapper,
@@ -729,6 +730,7 @@ class BoardService {
 		foreach ($stacks as $stack) {
 			/** @var Card[] $cards */
 			$cards = array_merge($activeCardsByStack[$stack->getId()] ?? [], $archivedCardsByStack[$stack->getId()] ?? []);
+			$cards = $this->cardAccessPolicyIntegration->filterVisibleCards($cards, $this->userId);
 
 			foreach ($cards as $card) {
 				$targetStackId = $moveCardsToLeftStack ? $newStacks[0]->getId() : $newStacks[$i]->getId();
@@ -839,6 +841,9 @@ class BoardService {
 
 		// Fetch all active cards for all stacks in one query
 		$cardsByStack = $this->cardMapper->findAllForStacks($stackIds);
+		foreach ($cardsByStack as $stackId => $cards) {
+			$cardsByStack[$stackId] = $this->cardAccessPolicyIntegration->filterVisibleCards($cards, $this->userId);
+		}
 
 		$allCards = array_merge(...array_values(array_filter($cardsByStack)));
 		$allCardIds = array_map(fn (Card $card) => $card->getId(), $allCards);

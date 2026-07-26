@@ -35,7 +35,7 @@
 			@click="unassignCardFromMe()">
 			{{ t('deck', 'Unassign myself') }}
 		</NcActionButton>
-		<NcActionButton v-if="canEdit && !completionByStack"
+		<NcActionButton v-if="canEdit && canEditBoard && !completionByStack && canVerify"
 			icon="icon-checkmark"
 			:close-after-click="true"
 			:disabled="(isInDoneColumn && !!card.done) || (!card.done && hasUnmetDependencies)"
@@ -43,7 +43,7 @@
 			@click="changeCardDoneStatus()">
 			{{ card.done ? t('deck', 'Mark as not done') : t('deck', 'Mark as done') }}
 		</NcActionButton>
-		<NcActionButton v-if="canEdit"
+		<NcActionButton v-if="canEdit && canEditBoard && canMoveCard"
 			icon="icon-external"
 			:close-after-click="true"
 			@click="openCardMoveDialog">
@@ -84,6 +84,7 @@ import { showUndo } from '@nextcloud/dialogs'
 import '@nextcloud/dialogs/style.css'
 import { emit } from '@nextcloud/event-bus'
 import { useActionsStore } from '../../stores/actions.js'
+import { canVerifyCard, hasCardMoveCapability } from '../../utils/cardCapabilities.js'
 
 export default {
 	name: 'CardMenuEntries',
@@ -127,6 +128,12 @@ export default {
 		}),
 		canEdit() {
 			return !this.card.archived
+		},
+		canVerify() {
+			return canVerifyCard(this.card)
+		},
+		canMoveCard() {
+			return hasCardMoveCapability(this.card)
 		},
 		isInDoneColumn() {
 			return this.stackById(this.card.stackId)?.isDoneColumn === true

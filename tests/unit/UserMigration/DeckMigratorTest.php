@@ -9,14 +9,18 @@ declare(strict_types=1);
 
 namespace OCA\Deck\UserMigration;
 
+use OCA\Deck\Db\Acl;
 use OCA\Deck\Db\AclMapper;
 use OCA\Deck\Db\AssignmentMapper;
 use OCA\Deck\Db\AttachmentMapper;
 use OCA\Deck\Db\Board;
 use OCA\Deck\Db\BoardMapper;
+use OCA\Deck\Db\Card;
 use OCA\Deck\Db\CardMapper;
 use OCA\Deck\Db\LabelMapper;
+use OCA\Deck\Db\Stack;
 use OCA\Deck\Db\StackMapper;
+use OCA\Deck\NoPermissionException;
 use OCA\Deck\Service\BoardService;
 use OCA\Deck\Service\Importer\BoardImportService;
 use OCA\Deck\Service\PermissionService;
@@ -162,6 +166,48 @@ class DeckMigratorTest extends TestCase {
 					return is_array($decoded) && isset($decoded['boards']) && count($decoded['boards']) === 0;
 				})
 			);
+
+		$this->migrator->export($user, $destination, $this->createMock(OutputInterface::class));
+	}
+
+	public function testExportFiltersArchivedCardsByPolicy(): void {
+		$user = $this->createMock(IUser::class);
+		$user->method('getUID')->willReturn('admin');
+		$board = new Board();
+		$board->setId(42);
+		$stack = new Stack();
+		$stack->setId(7);
+		$stack->setCards([]);
+		$board->setStacks([$stack]);
+		$visibleCard = new Card();
+		$visibleCard->setId(10);
+		$visibleCard->setStackId(7);
+		$hiddenCard = new Card();
+		$hiddenCard->setId(11);
+		$hiddenCard->setStackId(7);
+
+		$this->boardMapper->method('findAllByUser')->with('admin')->willReturn([$board]);
+		$this->boardService->method('export')->with(42)->willReturn($board);
+		$this->cardMapper->method('findAllArchivedForStacks')->with([7])->willReturn([7 => [$visibleCard, $hiddenCard]]);
+		$this->permissionService->expects($this->exactly(2))
+			->method('checkPermission')
+			->with($this->cardMapper, $this->anything(), Acl::PERMISSION_READ, 'admin')
+			->willReturnCallback(static function (CardMapper $mapper, int $cardId): bool {
+				if ($cardId === 11) {
+					throw new NoPermissionException('Hidden by card policy');
+				}
+				return true;
+			});
+		$this->commentsManager->method('getForObject')->willReturn(new \ArrayIterator([]));
+		$this->shareFileAttachmentExportService->method('exportCardAttachments')->willReturn([]);
+
+		$destination = $this->createMock(IExportDestination::class);
+		$destination->expects($this->once())
+			->method('addFileContents')
+			->with('boards.json', $this->callback(static function (string $json): bool {
+				$cards = json_decode($json, true)['boards'][0]['stacks'][0]['cards'] ?? [];
+				return array_column($cards, 'id') === [10];
+			}));
 
 		$this->migrator->export($user, $destination, $this->createMock(OutputInterface::class));
 	}

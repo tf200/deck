@@ -55,6 +55,7 @@ class PermissionServiceTest extends \Test\TestCase {
 	private MockObject|IManager $shareManager;
 	private IConfig|MockObject $config;
 	private ICloudIdManager|MockObject $cloudIdManager;
+	private CardAccessPolicyIntegration|MockObject $cardAccessPolicyIntegration;
 
 	public function setUp(): void {
 		parent::setUp();
@@ -68,9 +69,12 @@ class PermissionServiceTest extends \Test\TestCase {
 		$this->shareManager = $this->createMock(IManager::class);
 		$this->config = $this->createMock(IConfig::class);
 		$this->cloudIdManager = $this->createMock(ICloudIdManager::class);
+		$this->cardAccessPolicyIntegration = $this->createMock(CardAccessPolicyIntegration::class);
+		$this->cardAccessPolicyIntegration->method('checkPermission')->willReturn(true);
 
 		$this->service = new PermissionService(
 			$this->logger,
+			$this->cardAccessPolicyIntegration,
 			$this->circlesService,
 			$this->aclMapper,
 			$this->boardMapper,
@@ -284,6 +288,55 @@ class PermissionServiceTest extends \Test\TestCase {
 		$mapper->expects($this->once())->method('findBoardId')->willThrowException(new NoPermissionException(null));
 		$this->expectException(NoPermissionException::class);
 		$this->service->checkPermission($mapper, 1234, Acl::PERMISSION_READ);
+	}
+
+	public function testCheckPermissionNativeDenialDoesNotInvokeCardPolicy(): void {
+		$cardAccessPolicyIntegration = $this->createMock(CardAccessPolicyIntegration::class);
+		$cardAccessPolicyIntegration->expects($this->never())->method('checkPermission');
+		$service = $this->createService($cardAccessPolicyIntegration);
+		$mapper = $this->createMock(IPermissionMapper::class);
+		$mapper->method('findBoardId')->with(1234)->willReturn(123);
+		$board = new Board();
+		$board->setOwner('other-user');
+		$this->boardMapper->method('find')->with(123)->willReturn($board);
+		$this->aclMapper->method('findAll')->with(123)->willReturn([]);
+
+		$this->expectException(NoPermissionException::class);
+		$service->checkPermission($mapper, 1234, Acl::PERMISSION_READ);
+	}
+
+	public function testCheckPermissionResolvesCurrentUserBeforeCardPolicy(): void {
+		$cardAccessPolicyIntegration = $this->createMock(CardAccessPolicyIntegration::class);
+		$service = $this->createService($cardAccessPolicyIntegration);
+		$mapper = $this->createMock(IPermissionMapper::class);
+		$mapper->method('findBoardId')->with(1234)->willReturn(123);
+		$board = new Board();
+		$board->setOwner('admin');
+		$this->boardMapper->method('find')->with(123)->willReturn($board);
+		$this->aclMapper->method('findAll')->with(123)->willReturn([]);
+		$cardAccessPolicyIntegration->expects($this->once())
+			->method('checkPermission')
+			->with($mapper, 1234, Acl::PERMISSION_READ, 'admin')
+			->willReturn(true);
+
+		$this->assertTrue($service->checkPermission($mapper, 1234, Acl::PERMISSION_READ, null));
+	}
+
+	private function createService(CardAccessPolicyIntegration $cardAccessPolicyIntegration): PermissionService {
+		return new PermissionService(
+			$this->logger,
+			$cardAccessPolicyIntegration,
+			$this->circlesService,
+			$this->aclMapper,
+			$this->boardMapper,
+			$this->userManager,
+			$this->createMock(ConfigService::class),
+			$this->groupManager,
+			$this->shareManager,
+			$this->config,
+			$this->cloudIdManager,
+			'admin',
+		);
 	}
 
 	private function generateAcl($boardId, $type, $participant, $edit, $manage, $share) {

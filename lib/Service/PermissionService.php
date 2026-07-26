@@ -41,6 +41,7 @@ class PermissionService {
 
 	public function __construct(
 		private LoggerInterface $logger,
+		private CardAccessPolicyIntegration $cardAccessPolicyIntegration,
 		private CirclesService $circlesService,
 		private AclMapper $aclMapper,
 		private BoardMapper $boardMapper,
@@ -145,12 +146,10 @@ class PermissionService {
 	 * @throws NoPermissionException
 	 */
 	public function checkPermission(?IPermissionMapper $mapper, $id, int $permission, $userId = null, bool $allowDeletedCard = false, bool $allowDeletedBoard = false): bool {
-		if ($mapper !== null && class_exists('\OCA\ProjectCreatorAIO\Service\CardPolicyService')) {
-			$policyService = \OCP\Server::get(\OCA\ProjectCreatorAIO\Service\CardPolicyService::class);
-			if (!$policyService->checkPermission($mapper, $id, $permission, $userId)) {
-				throw new NoPermissionException('Permission denied by card policy');
-			}
+		if ($userId === null) {
+			$userId = $this->userId;
 		}
+
 		$boardId = (int)$id;
 		if ($mapper instanceof IPermissionMapper && !($mapper instanceof BoardMapper)) {
 			$boardId = $mapper->findBoardId($id);
@@ -162,24 +161,27 @@ class PermissionService {
 		}
 
 		$permissions = $this->getPermissions($boardId, $userId, $allowDeletedBoard);
-		if ($permissions[$permission] === true) {
-
-			if (!$allowDeletedCard && $mapper instanceof CardMapper) {
-				try {
-					$card = $mapper->find((int)$id, false);
-				} catch (DoesNotExistException $e) {
-					throw new NoPermissionException('Permission denied');
-				}
-				if ($card->getDeletedAt() > 0) {
-					throw new NoPermissionException('Card is deleted');
-				}
-			}
-
-			return true;
+		if ($permissions[$permission] !== true) {
+			// Throw NoPermission to not leak information about existing entries
+			throw new NoPermissionException('Permission denied');
 		}
 
-		// Throw NoPermission to not leak information about existing entries
-		throw new NoPermissionException('Permission denied');
+		if (!$allowDeletedCard && $mapper instanceof CardMapper) {
+			try {
+				$card = $mapper->find((int)$id, false);
+			} catch (DoesNotExistException $e) {
+				throw new NoPermissionException('Permission denied');
+			}
+			if ($card->getDeletedAt() > 0) {
+				throw new NoPermissionException('Card is deleted');
+			}
+		}
+
+		if ($mapper !== null && !$this->cardAccessPolicyIntegration->checkPermission($mapper, $id, $permission, $userId)) {
+			throw new NoPermissionException('Permission denied by card policy');
+		}
+
+		return true;
 	}
 
 	/**

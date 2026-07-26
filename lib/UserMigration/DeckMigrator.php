@@ -10,6 +10,7 @@ declare(strict_types=1);
 namespace OCA\Deck\UserMigration;
 
 use OCA\Deck\AppInfo\Application;
+use OCA\Deck\Db\Acl;
 use OCA\Deck\Db\AclMapper;
 use OCA\Deck\Db\AssignmentMapper;
 use OCA\Deck\Db\AttachmentMapper;
@@ -17,6 +18,7 @@ use OCA\Deck\Db\BoardMapper;
 use OCA\Deck\Db\CardMapper;
 use OCA\Deck\Db\LabelMapper;
 use OCA\Deck\Db\StackMapper;
+use OCA\Deck\NoPermissionException;
 use OCA\Deck\Service\BoardService;
 use OCA\Deck\Service\Importer\BoardImportService;
 use OCA\Deck\Service\PermissionService;
@@ -130,7 +132,7 @@ class DeckMigrator implements IMigrator, ISizeEstimationMigrator {
 				continue;
 			}
 			$boardWithStacksAndCards = $this->boardService->export($board->getId());
-			$this->appendArchivedCards($boardWithStacksAndCards);
+			$this->appendArchivedCards($boardWithStacksAndCards, $uid);
 			$exportData['boards'][] = $this->serializeBoard($boardWithStacksAndCards, $uid);
 		}
 
@@ -154,7 +156,7 @@ class DeckMigrator implements IMigrator, ISizeEstimationMigrator {
 		return $boardData;
 	}
 
-	private function appendArchivedCards(object $board): void {
+	private function appendArchivedCards(object $board, string $uid): void {
 		$stacks = $board->getStacks() ?? [];
 		if (count($stacks) === 0) {
 			return;
@@ -166,6 +168,14 @@ class DeckMigrator implements IMigrator, ISizeEstimationMigrator {
 		foreach ($stacks as $stack) {
 			$activeCards = $stack->getCards() ?? [];
 			$archivedCards = $archivedCardsByStack[$stack->getId()] ?? [];
+			$archivedCards = array_filter($archivedCards, function ($card) use ($uid): bool {
+				try {
+					$this->permissionService->checkPermission($this->cardMapper, $card->getId(), Acl::PERMISSION_READ, $uid);
+					return true;
+				} catch (NoPermissionException $e) {
+					return false;
+				}
+			});
 			if (count($archivedCards) === 0) {
 				continue;
 			}

@@ -14,6 +14,8 @@ class CardDetails extends Card {
 	private Card $card;
 	private ?Board $board;
 	private ?Reference $referenceData = null;
+	/** @var null|array{canMove: bool, canSign: bool, canVerify: bool} */
+	private ?array $capabilities = null;
 
 	/** @psalm-suppress ConstructorSignatureMismatch */
 	public function __construct(Card $card, ?Board $board = null) {
@@ -28,6 +30,11 @@ class CardDetails extends Card {
 
 	public function setReferenceData(?Reference $data): void {
 		$this->referenceData = $data;
+	}
+
+	/** @param array{canMove: bool, canSign: bool, canVerify: bool} $capabilities */
+	public function setCapabilities(array $capabilities): void {
+		$this->capabilities = $capabilities;
 	}
 
 	public function jsonSerialize(array $extras = []): array {
@@ -46,6 +53,9 @@ class CardDetails extends Card {
 		$this->appendBoardDetails($array);
 
 		$array['referenceData'] = $this->referenceData?->jsonSerialize();
+		if ($this->capabilities !== null) {
+			$array += $this->capabilities;
+		}
 
 		return $array;
 	}

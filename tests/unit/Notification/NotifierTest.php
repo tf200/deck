@@ -28,12 +28,15 @@ use OCA\Deck\Db\BoardMapper;
 use OCA\Deck\Db\CardMapper;
 use OCA\Deck\Db\Stack;
 use OCA\Deck\Db\StackMapper;
+use OCA\Deck\NoPermissionException;
+use OCA\Deck\Service\PermissionService;
 use OCP\IL10N;
 use OCP\IURLGenerator;
 use OCP\IUser;
 use OCP\IUserManager;
 use OCP\L10N\IFactory;
 use OCP\Notification\INotification;
+use OCP\Notification\AlreadyProcessedException;
 use OCP\Server;
 use PHPUnit\Framework\MockObject\MockObject;
 
@@ -51,6 +54,8 @@ class NotifierTest extends \Test\TestCase {
 	protected $stackMapper;
 	/** @var BoardMapper */
 	protected $boardMapper;
+	/** @var PermissionService|MockObject */
+	protected $permissionService;
 	/** @var IL10N|MockObject */
 	protected $l10n;
 	/** @var Notifier */
@@ -64,13 +69,15 @@ class NotifierTest extends \Test\TestCase {
 		$this->cardMapper = $this->createMock(CardMapper::class);
 		$this->stackMapper = $this->createMock(StackMapper::class);
 		$this->boardMapper = $this->createMock(BoardMapper::class);
+		$this->permissionService = $this->createMock(PermissionService::class);
 		$this->notifier = new Notifier(
 			$this->l10nFactory,
 			$this->url,
 			$this->userManager,
 			$this->cardMapper,
 			$this->stackMapper,
-			$this->boardMapper
+			$this->boardMapper,
+			$this->permissionService,
 		);
 		$this->l10n = Server::get(IFactory::class)->get('deck');
 		$this->l10nFactory->expects($this->once())
@@ -139,6 +146,24 @@ class NotifierTest extends \Test\TestCase {
 		$actualNotification = $this->notifier->prepare($notification, 'en_US');
 
 		$this->assertEquals($notification, $actualNotification);
+	}
+
+	public function testPrepareSuppressesUnreadableCardNotification(): void {
+		$notification = $this->createMock(INotification::class);
+		$notification->method('getApp')->willReturn('deck');
+		$notification->method('getObjectType')->willReturn('card');
+		$notification->method('getSubjectParameters')->willReturn(['Card title', 'Board title']);
+		$notification->method('getSubject')->willReturn('card-overdue');
+		$notification->method('getObjectId')->willReturn('123');
+		$notification->method('getUser')->willReturn('hidden-user');
+		$this->permissionService->expects($this->once())
+			->method('checkPermission')
+			->with($this->cardMapper, 123, \OCA\Deck\Db\Acl::PERMISSION_READ, 'hidden-user')
+			->willThrowException(new NoPermissionException('Permission denied'));
+		$this->stackMapper->expects($this->never())->method('findStackFromCardId');
+		$this->expectException(AlreadyProcessedException::class);
+
+		$this->notifier->prepare($notification, 'en_US');
 	}
 
 	public function testPrepareCardCommentMentioned() {

@@ -356,6 +356,14 @@ class BatchQueryPerformanceTest extends TestCase {
 		$this->userManager = $this->createMock(IUserManager::class);
 		$this->commentsManager = $this->createMock(ICommentsManager::class);
 		$this->referenceManager = $this->createMock(IReferenceManager::class);
+		$cardAccessPolicyIntegration = $this->createMock(CardAccessPolicyIntegration::class);
+		$cardAccessPolicyIntegration->method('filterVisibleCards')
+			->willReturnCallback(static fn (array $cards): array => $cards);
+		$cardAccessPolicyIntegration->method('getCapabilities')->willReturn([
+			'canMove' => true,
+			'canSign' => true,
+			'canVerify' => true,
+		]);
 
 		$this->cardService = new CardService(
 			$this->cardMapper,
@@ -364,6 +372,7 @@ class BatchQueryPerformanceTest extends TestCase {
 			$this->labelMapper,
 			$this->createMock(LabelService::class),
 			$this->createMock(PermissionService::class),
+			$cardAccessPolicyIntegration,
 			$this->boardService,
 			$this->createMock(NotificationHelper::class),
 			$this->assignedUsersMapper,

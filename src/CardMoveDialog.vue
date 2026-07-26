@@ -22,7 +22,7 @@
 				label="title" />
 		</div>
 		<template #actions>
-			<NcButton :disabled="!isBoardAndStackChoosen" type="secondary" @click="moveCard">
+			<NcButton :disabled="!isBoardAndStackChoosen || !canMoveToSelectedStack" type="secondary" @click="moveCard">
 				{{ t('deck', 'Move card') }}
 			</NcButton>
 			<NcButton :disabled="!isBoardAndStackChoosen" type="primary" @click="cloneCard">
@@ -38,6 +38,7 @@ import { generateOcsUrl } from '@nextcloud/router'
 import axios from '@nextcloud/axios'
 import { subscribe, unsubscribe } from '@nextcloud/event-bus'
 import { mapGetters } from 'vuex'
+import { canMoveCardToStack } from './utils/cardCapabilities.js'
 
 export default {
 	name: 'CardMoveDialog',
@@ -58,6 +59,18 @@ export default {
 		},
 		isBoardAndStackChoosen() {
 			return !(this.selectedBoard === '' || this.selectedStack === '')
+		},
+		canMoveToSelectedStack() {
+			if (!this.card || !this.selectedStack) {
+				return false
+			}
+
+			const sourceStack = this.stackById(this.card.stackId)
+			const currentBoard = this.$store.state.currentBoard
+			const sourceBoard = Number(currentBoard?.id) === Number(sourceStack?.boardId)
+				? currentBoard
+				: this.boardById(sourceStack?.boardId)
+			return canMoveCardToStack(this.card, sourceBoard, this.selectedStack.id)
 		},
 	},
 	watch: {

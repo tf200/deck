@@ -47,10 +47,10 @@
 				</NcActionButton>
 			</NcActions>
 
-			<NcButton v-if="!card.done"
+			<NcButton v-if="canEdit && !card.done"
 				type="secondary"
 				class="completed-button"
-				:disabled="hasUnmetDependencies"
+				:disabled="hasUnmetDependencies || !canVerify"
 				:title="hasUnmetDependencies ? t('deck', 'Not all dependent cards are done.') : t('deck', 'Mark as done')"
 				@click="changeCardDoneStatus()">
 				<template #icon>
@@ -74,9 +74,10 @@
 				</span>
 			</div>
 			<div class="due-actions">
-				<NcButton v-if="!card.archived"
+				<NcButton v-if="canEdit && !card.archived"
 					type="tertiary"
 					:name="t('deck', 'Not done')"
+					:disabled="!canVerify"
 					@click="changeCardDoneStatus()">
 					<template #icon>
 						<ClearIcon :size="20" />
@@ -112,6 +113,7 @@ import CalendarCheck from 'vue-material-design-icons/CalendarCheckOutline.vue'
 import CheckIcon from 'vue-material-design-icons/Check.vue'
 import ClearIcon from 'vue-material-design-icons/Close.vue'
 import CardDetailEntry from './CardDetailEntry.vue'
+import { canVerifyCard } from '../../utils/cardCapabilities.js'
 
 export default defineComponent({
 	name: 'DueDateSelector',
@@ -161,6 +163,9 @@ export default defineComponent({
 		}
 	},
 	computed: {
+		canVerify() {
+			return canVerifyCard(this.card)
+		},
 		hasUnmetDependencies() {
 			return this.$store.getters.hasUnmetDependencies(this.card)
 		},

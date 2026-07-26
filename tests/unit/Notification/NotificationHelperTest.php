@@ -31,6 +31,7 @@ use OCA\Deck\Db\BoardMapper;
 use OCA\Deck\Db\Card;
 use OCA\Deck\Db\CardMapper;
 use OCA\Deck\Db\User;
+use OCA\Deck\NoPermissionException;
 use OCA\Deck\Service\ConfigService;
 use OCA\Deck\Service\PermissionService;
 use OCP\Comments\IComment;
@@ -105,6 +106,19 @@ class NotificationHelperTest extends \Test\TestCase {
 			->with('getNotified', [])
 			->willReturn(true);
 		$this->notificationHelper->sendCardDuedate($card);
+	}
+
+	public function testSendCardAssignedSkipsUnreadableRecipient(): void {
+		$card = Card::fromParams(['id' => 1337]);
+		$this->permissionService->expects($this->once())
+			->method('checkPermission')
+			->with($this->cardMapper, 1337, Acl::PERMISSION_READ, 'hidden-user')
+			->willThrowException(new NoPermissionException('Permission denied'));
+		$this->cardMapper->expects($this->never())->method('findBoardId');
+		$this->notificationManager->expects($this->never())->method('createNotification');
+		$this->notificationManager->expects($this->never())->method('notify');
+
+		$this->notificationHelper->sendCardAssigned($card, 'hidden-user');
 	}
 
 	private function createUserMock($uid) {

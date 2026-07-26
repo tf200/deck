@@ -12,7 +12,6 @@ namespace OCA\Deck\Service;
 use OCA\Deck\Db\Board;
 use OCA\Deck\Db\BoardMapper;
 use OCA\Deck\Db\CardMapper;
-use OCA\Deck\Model\CardDetails;
 
 class OverviewService {
 
@@ -40,9 +39,8 @@ class OverviewService {
 			$this->cardMapper->findToMeOrNotAssignedCards($boardSharedIds, $userId)
 		);
 
-		$this->cardService->enrichCards($foundCards);
 		$overview = [];
-		foreach ($foundCards as $card) {
+		foreach ($this->cardService->enrichCards($foundCards) as $card) {
 			$diffDays = $card->getDaysUntilDue();
 
 			$key = 'later';
@@ -58,7 +56,7 @@ class OverviewService {
 				$key = 'nextSevenDays';
 			}
 
-			$card = (new CardDetails($card, $card->getRelatedBoard()));
+			$card->setBoard($card->getRelatedBoard());
 			$overview[$key][] = $card->jsonSerialize();
 		}
 		return $overview;

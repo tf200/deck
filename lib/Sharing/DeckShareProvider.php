@@ -622,7 +622,11 @@ class DeckShareProvider implements \OCP\Share\IShareProvider, IPartialShareProvi
 		$share = $this->createShareObject($data);
 
 		if ($recipientId !== null) {
-			$share = $this->resolveSharesForRecipient([$share], $recipientId)[0];
+			$resolvedShares = $this->resolveSharesForRecipient([$share], $recipientId);
+			if ($resolvedShares === []) {
+				throw new ShareNotFound();
+			}
+			$share = $resolvedShares[0];
 		}
 
 		return $share;
@@ -657,8 +661,23 @@ class DeckShareProvider implements \OCP\Share\IShareProvider, IPartialShareProvi
 			$shareMap = [];
 
 			foreach ($shareSlice as $share) {
+				try {
+					$this->permissionService->checkPermission(
+						$this->cardMapper,
+						(int)$share->getSharedWith(),
+						Acl::PERMISSION_READ,
+						$userId,
+						true,
+					);
+				} catch (NoPermissionException $e) {
+					continue;
+				}
 				$ids[] = (int)$share->getId();
 				$shareMap[$share->getId()] = $share;
+			}
+
+			if ($shareMap === []) {
+				continue;
 			}
 
 			$qb = $this->dbConnection->getQueryBuilder();

@@ -35,7 +35,13 @@ class BoardTest extends TestCase {
 			'activeSessions' => [],
 			'ETag' => $board->getETag(),
 			'shareToken' => null,
-			'externalId' => null
+			'externalId' => null,
+			'isProjectBoard' => false,
+			'projectType' => null,
+			'completionByStack' => false,
+			'doneStackId' => null,
+			'approvedStackId' => null,
+			'policyVersion' => 1,
 		], $board->jsonSerialize());
 	}
 
@@ -61,7 +67,13 @@ class BoardTest extends TestCase {
 			'activeSessions' => [],
 			'ETag' => $board->getETag(),
 			'shareToken' => null,
-			'externalId' => null
+			'externalId' => null,
+			'isProjectBoard' => false,
+			'projectType' => null,
+			'completionByStack' => false,
+			'doneStackId' => null,
+			'approvedStackId' => null,
+			'policyVersion' => 1,
 		], $board->jsonSerialize());
 	}
 
@@ -85,7 +97,13 @@ class BoardTest extends TestCase {
 			'activeSessions' => [],
 			'ETag' => $board->getETag(),
 			'shareToken' => null,
-			'externalId' => null
+			'externalId' => null,
+			'isProjectBoard' => false,
+			'projectType' => null,
+			'completionByStack' => false,
+			'doneStackId' => null,
+			'approvedStackId' => null,
+			'policyVersion' => 1,
 		], $board->jsonSerialize());
 	}
 	public function testSetAcl() {
@@ -117,7 +135,13 @@ class BoardTest extends TestCase {
 			'activeSessions' => [],
 			'ETag' => $board->getETag(),
 			'shareToken' => null,
-			'externalId' => null
+			'externalId' => null,
+			'isProjectBoard' => false,
+			'projectType' => null,
+			'completionByStack' => false,
+			'doneStackId' => null,
+			'approvedStackId' => null,
+			'policyVersion' => 1,
 		], $board->jsonSerialize());
 	}
 }
