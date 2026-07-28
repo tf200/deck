@@ -44,7 +44,7 @@
 						value="">
 				</form>
 			</transition>
-			<NcActions v-if="canManage && !isArchived" :force-menu="true">
+			<NcActions v-if="canManage && !isArchived && !isCombiProjectBoard" :force-menu="true">
 				<NcActionButton v-if="!showArchived" icon="icon-archive" @click="modalArchivAllCardsShow=true">
 					<template #icon>
 						<ArchiveIcon decorative />
@@ -206,6 +206,7 @@ export default {
 		...mapGetters([
 			'canManage',
 			'canEdit',
+			'isCombiProjectBoard',
 			'isArchived',
 			'boardById',
 			'stackById',

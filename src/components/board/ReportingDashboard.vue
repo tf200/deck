@@ -4,7 +4,7 @@
 -->
 
 <template>
-	<div class="reporting-dashboard">
+	<div class="reporting-dashboard" :class="{ 'reporting-dashboard--inline': inline }">
 		<div v-if="loading" class="reporting-dashboard__loading">
 			<div class="icon icon-loading" />
 			<h3>Loading statistics...</h3>
@@ -52,7 +52,7 @@
 								<span class="reporting-dashboard__kpi-label important-label">Kritieke Processtap</span>
 								<span class="reporting-dashboard__kpi-subvalue important-value">{{ openImportantCount }} / {{ totalImportantCount }}</span>
 							</div>
-							<div class="reporting-dashboard__split-divider"></div>
+							<div class="reporting-dashboard__split-divider" />
 							<div>
 								<span class="reporting-dashboard__kpi-label">Other Open Tasks</span>
 								<span class="reporting-dashboard__kpi-subvalue">{{ openOtherCount }} / {{ totalOtherCount }}</span>
@@ -69,9 +69,21 @@
 					<h3>Completion Rate</h3>
 					<div class="reporting-dashboard__donut-container">
 						<svg class="reporting-dashboard__donut" viewBox="0 0 120 120">
-							<circle class="reporting-dashboard__donut-bg" cx="60" cy="60" r="50" fill="none" stroke-width="10" />
-							<circle class="reporting-dashboard__donut-progress" cx="60" cy="60" r="50" fill="none" stroke-width="10"
-								:stroke-dasharray="strokeDasharray" :stroke-dashoffset="strokeDashoffset" transform="rotate(-90 60 60)" />
+							<circle class="reporting-dashboard__donut-bg"
+								cx="60"
+								cy="60"
+								r="50"
+								fill="none"
+								stroke-width="10" />
+							<circle class="reporting-dashboard__donut-progress"
+								cx="60"
+								cy="60"
+								r="50"
+								fill="none"
+								stroke-width="10"
+								:stroke-dasharray="strokeDasharray"
+								:stroke-dashoffset="strokeDashoffset"
+								transform="rotate(-90 60 60)" />
 						</svg>
 						<div class="reporting-dashboard__donut-text">
 							<span class="percentage-val">{{ Math.round(completionRate) }}%</span>
@@ -90,7 +102,7 @@
 								<span class="card-count">{{ item.count }} {{ item.count === 1 ? 'task' : 'tasks' }}</span>
 							</div>
 							<div class="reporting-dashboard__bar-track">
-								<div class="reporting-dashboard__bar-progress" 
+								<div class="reporting-dashboard__bar-progress"
 									:style="{ width: item.percentage + '%', backgroundColor: item.color || 'var(--color-primary)' }" />
 							</div>
 						</div>
@@ -120,6 +132,14 @@ export default {
 			type: Number,
 			required: true,
 		},
+		inline: {
+			type: Boolean,
+			default: false,
+		},
+		preloaded: {
+			type: Boolean,
+			default: false,
+		},
 	},
 	data() {
 		return {
@@ -142,7 +162,7 @@ export default {
 					list.push({
 						...c,
 						stackTitle: s.title,
-						stackDone: s.done,
+						stackDone: s.isDoneColumn,
 					})
 				}
 			}
@@ -203,7 +223,7 @@ export default {
 				'#34495e',
 				'#1abc9c',
 				'#f1c40f',
-				'#e74c3c'
+				'#e74c3c',
 			]
 
 			return this.stacksByBoard.map((s, index) => {
@@ -213,15 +233,17 @@ export default {
 					title: s.title || '',
 					count,
 					percentage: (count / maxCount) * 100,
-					color: colors[index % colors.length]
+					color: colors[index % colors.length],
 				}
 			})
-		}
+		},
 	},
 	async created() {
 		try {
-			await this.$store.dispatch('loadBoardById', this.boardId)
-			await this.$store.dispatch('loadStacks', this.boardId)
+			if (!this.preloaded) {
+				await this.$store.dispatch('loadBoardById', this.boardId)
+				await this.$store.dispatch('loadStacks', this.boardId)
+			}
 		} catch (e) {
 			this.error = 'Failed to load board statistics'
 		} finally {
@@ -233,16 +255,16 @@ export default {
 			if (card.done) return true
 			if (card.stackDone) return true
 			const title = (card.stackTitle || '').toLowerCase()
-			return title.includes('done') || 
-				title.includes('afgerond') || 
-				title.includes('completed') || 
-				title.includes('afgehandeld')
+			return title.includes('done')
+				|| title.includes('afgerond')
+				|| title.includes('completed')
+				|| title.includes('afgehandeld')
 		},
 		isImportant(card) {
 			if (!card.labels || !Array.isArray(card.labels)) return false
 			return card.labels.some(l => l.title === 'Kritieke Processtap')
-		}
-	}
+		},
+	},
 }
 </script>
 
@@ -255,6 +277,20 @@ export default {
 	height: 100%;
 	overflow-y: auto;
 	box-sizing: border-box;
+}
+
+.reporting-dashboard--inline {
+	height: auto;
+	overflow: visible;
+	flex: none;
+	border-radius: 0;
+	border-bottom: 1px solid var(--color-border);
+}
+
+@media (max-width: 600px) {
+	.reporting-dashboard--inline {
+		padding: 16px;
+	}
 }
 
 .reporting-dashboard__loading,
@@ -295,6 +331,7 @@ export default {
 	border-color: rgba(52, 152, 219, 0.3);
 	background: rgba(52, 152, 219, 0.04);
 }
+
 .reporting-dashboard__kpi-card.total-card .reporting-dashboard__kpi-icon {
 	color: #3498db;
 	background: rgba(52, 152, 219, 0.1);
@@ -305,6 +342,7 @@ export default {
 	border-color: rgba(46, 204, 113, 0.3);
 	background: rgba(46, 204, 113, 0.04);
 }
+
 .reporting-dashboard__kpi-card.completed-card .reporting-dashboard__kpi-icon {
 	color: #2ecc71;
 	background: rgba(46, 204, 113, 0.1);
@@ -315,15 +353,18 @@ export default {
 	border-color: rgba(230, 126, 34, 0.3);
 	background: rgba(230, 126, 34, 0.04);
 }
+
 .reporting-dashboard__kpi-card.overdue-card .reporting-dashboard__kpi-icon {
 	color: #e67e22;
 	background: rgba(230, 126, 34, 0.1);
 	border-color: rgba(230, 126, 34, 0.2);
 }
+
 .reporting-dashboard__kpi-card.overdue-card.has-overdue {
 	border-color: rgba(231, 76, 60, 0.5);
 	background: rgba(231, 76, 60, 0.06);
 }
+
 .reporting-dashboard__kpi-card.overdue-card.has-overdue .reporting-dashboard__kpi-icon {
 	color: #e74c3c;
 	background: rgba(231, 76, 60, 0.15);
@@ -334,6 +375,7 @@ export default {
 	border-color: rgba(155, 89, 182, 0.3);
 	background: rgba(155, 89, 182, 0.04);
 }
+
 .reporting-dashboard__kpi-card.open-card .reporting-dashboard__kpi-icon {
 	color: #9b59b6;
 	background: rgba(155, 89, 182, 0.1);
@@ -345,6 +387,7 @@ export default {
 	color: #e74c3c !important;
 	font-weight: 600;
 }
+
 .reporting-dashboard__open-tasks-split .important-value {
 	color: #e74c3c !important;
 	font-size: 15px;
@@ -460,7 +503,7 @@ export default {
 .reporting-dashboard__donut-text {
 	position: absolute;
 	top: 50%;
-	left: 50%;
+	inset-inline-start: 50%;
 	transform: translate(-50%, -50%);
 	display: flex;
 	flex-direction: column;

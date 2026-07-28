@@ -138,6 +138,9 @@ export default function storeFactory() {
 			canShare: state => {
 				return state.currentBoard ? state.currentBoard.permissions.PERMISSION_SHARE : false
 			},
+			isCombiProjectBoard: state => {
+				return state.currentBoard?.isProjectBoard === true && state.currentBoard?.projectType === 0
+			},
 			isArchived: state => {
 				return state.currentBoard && state.currentBoard.archived
 			},

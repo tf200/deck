@@ -25,7 +25,7 @@
 				<template #name>
 					{{ t('deck', 'No lists available') }}
 				</template>
-				<template v-if="canManage" #action>
+				<template v-if="canManage && !isCombiProjectBoard" #action>
 					{{ t('deck', 'Create a new list to add cards to this board') }}
 					<form @submit.prevent="addNewStack()">
 						<NcTextField ref="newStackInput"
@@ -55,24 +55,31 @@
 				:board-id="board.id" />
 			<div v-else-if="!isEmpty && !loading"
 				key="board"
-				ref="board"
-				class="board"
-				@mousedown="onMouseDown">
-				<Container lock-axix="y"
-					orientation="horizontal"
-					:drag-handle-selector="dragHandleSelector"
-					data-click-closes-sidebar="true"
-					@drag-start="draggingStack = true"
-					@drag-end="draggingStack = false"
-					@drop="onDropStack">
-					<Draggable v-for="stack in stacksByBoard"
-						:key="stack.id"
+				class="board-view"
+				:class="{ 'board-view--with-reporting': showProjectDashboard }">
+				<ReportingDashboard v-if="showProjectDashboard"
+					:board-id="board.id"
+					:inline="true"
+					:preloaded="true" />
+				<div ref="board"
+					class="board"
+					@mousedown="onMouseDown">
+					<Container lock-axix="y"
+						orientation="horizontal"
+						:drag-handle-selector="dragHandleSelector"
 						data-click-closes-sidebar="true"
-						data-dragscroll-enabled
-						class="stack-draggable-wrapper">
-						<Stack :stack="stack" :dragging="draggingStack" data-click-closes-sidebar="true" />
-					</Draggable>
-				</Container>
+						@drag-start="draggingStack = true"
+						@drag-end="draggingStack = false"
+						@drop="onDropStack">
+						<Draggable v-for="stack in stacksByBoard"
+							:key="stack.id"
+							data-click-closes-sidebar="true"
+							data-dragscroll-enabled
+							class="stack-draggable-wrapper">
+							<Stack :stack="stack" :dragging="draggingStack" data-click-closes-sidebar="true" />
+						</Draggable>
+					</Container>
+				</div>
 			</div>
 		</transition>
 		<GlobalSearchResults v-if="isFullApp" />
@@ -149,6 +156,7 @@ export default {
 		...mapGetters([
 			'canEdit',
 			'canManage',
+			'isCombiProjectBoard',
 			'viewMode',
 		]),
 		stacksByBoard() {
@@ -162,6 +170,9 @@ export default {
 		},
 		isEmpty() {
 			return this.stacksByBoard.length === 0
+		},
+		showProjectDashboard() {
+			return this.board?.isProjectBoard && this.viewMode === 'kanban'
 		},
 	},
 	watch: {
@@ -300,6 +311,28 @@ export default {
 		overflow-x: auto;
 		flex-grow: 1;
 		scrollbar-gutter: stable;
+	}
+
+	.board-view {
+		display: flex;
+		flex-direction: column;
+		flex-grow: 1;
+		min-height: 0;
+	}
+
+	.board-view--with-reporting {
+		overflow-y: auto;
+
+		.board {
+			flex: 1 0 min(70vh, 720px);
+			min-height: 480px;
+		}
+	}
+
+	@media (max-width: 600px) {
+		.board-view--with-reporting .board {
+			min-height: 400px;
+		}
 	}
 
 	/**

@@ -43,7 +43,7 @@
 					@blur="$store.dispatch('toggleShortcutLock', false)"
 					@input="$store.commit('setSearchQuery', $event.target.value)">
 			</div>
-			<div v-if="board && canManage && !showArchived && !board.archived"
+			<div v-if="board && canManage && !showArchived && !board.archived && !isCombiProjectBoard"
 				id="stack-add"
 				v-click-outside="hideAddStack">
 				<NcActions v-if="!isAddStackVisible">
@@ -356,6 +356,7 @@ export default {
 		...mapGetters([
 			'canEdit',
 			'canManage',
+			'isCombiProjectBoard',
 			'viewMode',
 		]),
 		...mapState({
