@@ -67,7 +67,7 @@
 					{{ t('deck', 'Delete list') }}
 				</NcActionButton>
 			</NcActions>
-			<NcActions v-if="canEdit && !showArchived && !isArchived">
+			<NcActions v-if="canEdit && !showArchived && !isArchived && !isCombiProjectBoard">
 				<NcActionButton data-cy="action:add-card" @click.stop="showAddCard=true">
 					{{ t('deck', 'Add card') }}
 					<template #icon>

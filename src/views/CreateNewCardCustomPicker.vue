@@ -229,7 +229,8 @@ export default {
 		fetchBoards() {
 			axios.get(generateUrl('/apps/deck/boards')).then((response) => {
 				this.boards = response.data.filter((board) => {
-					return board?.permissions?.PERMISSION_EDIT && !board?.archived && !board?.deletedAt
+					const isCombiProject = board?.isProjectBoard && Number(board?.projectType) === 0
+					return board?.permissions?.PERMISSION_EDIT && !board?.archived && !board?.deletedAt && !isCombiProject
 				})
 				this.loading = false
 				if (this.boardId !== null) {
