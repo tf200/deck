@@ -16,7 +16,7 @@
 			:reply="true"
 			:preview="true"
 			@cancel="cancelReply" />
-		<CommentForm v-model="newComment" @submit="createComment" />
+		<CommentForm v-model="newComment" :note-type.sync="newCommentType" @submit="createComment" />
 
 		<ul v-if="getCommentsForCard(card.id).length > 0" id="commentsFeed">
 			<CommentItem v-for="comment in getCommentsForCard(card.id)"
@@ -67,6 +67,7 @@ export default {
 	data() {
 		return {
 			newComment: '',
+			newCommentType: 'general',
 			isLoading: false,
 			currentUser: getCurrentUser(),
 			error: null,
@@ -125,14 +126,16 @@ export default {
 				this.error = t('deck', 'Failed to load comments')
 			}
 		},
-		async createComment(content) {
+		async createComment(content, noteType) {
 			const commentObj = {
 				cardId: this.card.id,
 				comment: content,
+				noteType,
 			}
 			await this.$store.dispatch('createComment', commentObj)
 			this.$store.dispatch('setReplyTo', null)
 			this.newComment = ''
+			this.newCommentType = 'general'
 			await this.loadComments()
 		},
 		async loadMore() {

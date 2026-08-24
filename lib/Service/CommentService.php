@@ -94,8 +94,11 @@ class CommentService {
 	 * @throws BadRequestException
 	 * @throws NotFoundException|NoPermissionException
 	 */
-	public function create(int $cardId, string $message, int $replyTo = 0): DataResponse {
+	public function create(int $cardId, string $message, int $replyTo = 0, string $noteType = CommentType::DEFAULT): DataResponse {
 		$this->permissionService->checkPermission($this->cardMapper, $cardId, Acl::PERMISSION_READ);
+		if (!CommentType::isValid($noteType)) {
+			throw new BadRequestException('Invalid note type');
+		}
 
 		// Check if parent is a comment on the same card
 		if ($replyTo !== 0) {
@@ -114,6 +117,7 @@ class CommentService {
 			$comment->setMessage($message);
 			$comment->setVerb('comment');
 			$comment->setParentId((string)$replyTo);
+			$this->setNoteType($comment, $noteType);
 			$this->commentsManager->save($comment);
 			return new DataResponse($this->formatComment($comment, true));
 		} catch (\InvalidArgumentException $e) {
@@ -126,13 +130,19 @@ class CommentService {
 		}
 	}
 
-	public function update(int $cardId, int $commentId, string $message): DataResponse {
+	public function update(int $cardId, int $commentId, string $message, ?string $noteType = null): DataResponse {
 		$comment = $this->get($cardId, $commentId);
 		if ($comment->getActorType() !== 'users' || $comment->getActorId() !== $this->userId) {
 			throw new NoPermissionException('Only authors are allowed to edit their comment.');
 		}
 
 		$comment->setMessage($message);
+		if ($noteType !== null) {
+			if (!CommentType::isValid($noteType)) {
+				throw new BadRequestException('Invalid note type');
+			}
+			$this->setNoteType($comment, $noteType);
+		}
 		$this->commentsManager->save($comment);
 		return new DataResponse($this->formatComment($comment));
 	}
@@ -166,6 +176,7 @@ class CommentService {
 			'actorType' => $comment->getActorType(),
 			'actorDisplayName' => $actorDisplayName,
 			'creationDateTime' => $comment->getCreationDateTime()->format(\DateTime::ATOM),
+			'noteType' => $this->getNoteType($comment),
 			'mentions' => array_map(function ($mention) {
 				try {
 					$displayName = $this->commentsManager->resolveDisplayName($mention['type'], $mention['id']);
@@ -190,5 +201,16 @@ class CommentService {
 		} catch (CommentNotFoundException $e) {
 		}
 		return $formattedComment;
+	}
+
+	private function getNoteType(IComment $comment): string {
+		$metadata = $comment->getMetaData() ?? [];
+		return CommentType::normalize($metadata[CommentType::METADATA_KEY] ?? null);
+	}
+
+	private function setNoteType(IComment $comment, string $noteType): void {
+		$metadata = $comment->getMetaData() ?? [];
+		$metadata[CommentType::METADATA_KEY] = $noteType;
+		$comment->setMetaData($metadata);
 	}
 }

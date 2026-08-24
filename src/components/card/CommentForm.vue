@@ -10,6 +10,14 @@
 			:maxlength="1000"
 			:user-data="members"
 			@submit="submit" />
+		<label class="comment-form__type-label">
+			<span>{{ t('deck', 'Type') }}</span>
+			<select v-model="selectedNoteType" class="comment-form__type-select">
+				<option v-for="type in noteTypeOptions" :key="type.value" :value="type.value">
+					{{ noteTypeLabel(type.value) }}
+				</option>
+			</select>
+		</label>
 		<NcButton v-show="hasContent"
 			type="tertiary"
 			:aria-label="t('deck', 'Submit')"
@@ -30,6 +38,7 @@
 import { mapState } from 'vuex'
 import { NcButton, NcRichContenteditable } from '@nextcloud/vue'
 import ArrowRightIcon from 'vue-material-design-icons/ArrowRight.vue'
+import { COMMENT_TYPES, DEFAULT_COMMENT_TYPE, commentTypeLabel } from '../../constants/comment-types.js'
 
 export default {
 	name: 'CommentForm',
@@ -43,10 +52,15 @@ export default {
 			type: String,
 			default: '',
 		},
+		noteType: {
+			type: String,
+			default: DEFAULT_COMMENT_TYPE,
+		},
 	},
 	data() {
 		return {
 			commentText: this.value,
+			selectedNoteType: this.noteType,
 			error: null,
 		}
 	},
@@ -66,6 +80,9 @@ export default {
 			})
 			return obj
 		},
+		noteTypeOptions() {
+			return COMMENT_TYPES
+		},
 		hasContent() {
 			return this.commentText.trim().length > 0
 		},
@@ -74,8 +91,15 @@ export default {
 		value(val) {
 			this.commentText = val
 		},
+		noteType(val) {
+			this.selectedNoteType = val || DEFAULT_COMMENT_TYPE
+		},
+		selectedNoteType(val) {
+			this.$emit('update:noteType', val)
+		},
 	},
 	methods: {
+		noteTypeLabel: commentTypeLabel,
 		autoComplete(search, callback) {
 			callback(Object.values(this.members))
 		},
@@ -99,7 +123,7 @@ export default {
 				temp.innerHTML = content
 				const text = temp.textContent || temp.innerText || ''
 				this.$emit('input', text)
-				this.$emit('submit', text)
+				this.$emit('submit', text, this.selectedNoteType)
 			}
 		},
 	},
@@ -129,5 +153,24 @@ export default {
 		:deep(.rich-content-editor__input) {
 			padding-inline-end: calc(var(--default-clickable-area) + var(--default-grid-baseline));
 		}
+	}
+
+	.comment-form__type-label {
+		display: flex;
+		align-items: center;
+		gap: 8px;
+		margin-top: 8px;
+		color: var(--color-text-lighter);
+		font-size: 12px;
+	}
+
+	.comment-form__type-select {
+		min-height: 34px;
+		padding: 0 8px;
+		border: 1px solid var(--color-border);
+		border-radius: var(--border-radius);
+		background: var(--color-main-background);
+		color: var(--color-main-text);
+		font-size: 12px;
 	}
 </style>

@@ -16,6 +16,7 @@ use OCA\Deck\Db\Board;
 use OCA\Deck\Db\Card;
 use OCA\Deck\Db\Label;
 use OCA\Deck\Db\Stack;
+use OCA\Deck\Service\CommentType;
 use OCA\Deck\Service\Importer\ABoardImportService;
 use OCP\Comments\IComment;
 use OCP\Comments\ICommentsManager;
@@ -136,10 +137,15 @@ class DeckJsonService extends ABoardImportService {
 					->setParentId($parentId)
 					->setMessage($commentOriginal->message)
 					->setCreationDateTime(\DateTime::createFromFormat('Y-m-d\TH:i:sP', $commentOriginal->creationDateTime));
-				$comment->setMetaData([
+				$metadata = [
 					'deckImportSourceId' => $commentId,
 					'deckImportParentId' => $parentId,
-				]);
+				];
+				$noteType = $commentOriginal->noteType ?? null;
+				if (CommentType::isValid($noteType)) {
+					$metadata[CommentType::METADATA_KEY] = $noteType;
+				}
+				$comment->setMetaData($metadata);
 				$comments[$targetCardId][$commentId] = $comment;
 			}
 		}

@@ -90,8 +90,8 @@ export default {
 			await dispatch('fetchComments', { cardId, offset: getters.getCommentsForCard(cardId).length })
 
 		},
-		async createComment({ commit, dispatch, state }, { cardId, comment }) {
-			await apiClient.createComment({ cardId, comment, replyTo: state.replyTo })
+		async createComment({ commit, dispatch, state }, { cardId, comment, noteType }) {
+			await apiClient.createComment({ cardId, comment, noteType, replyTo: state.replyTo })
 			await dispatch('fetchComments', { cardId })
 		},
 		async deleteComment({ commit }, data) {

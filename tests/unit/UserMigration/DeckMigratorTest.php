@@ -25,6 +25,7 @@ use OCA\Deck\Service\BoardService;
 use OCA\Deck\Service\Importer\BoardImportService;
 use OCA\Deck\Service\PermissionService;
 use OCA\Deck\Service\ShareFileAttachmentExportService;
+use OCP\Comments\IComment;
 use OCP\Comments\ICommentsManager;
 use OCP\Files\IAppData;
 use OCP\IL10N;
@@ -223,6 +224,59 @@ class DeckMigratorTest extends TestCase {
 			$source,
 			$this->createMock(OutputInterface::class),
 		);
+	}
+
+	public function testMigrationFormatVersionCompatibility(): void {
+		$this->assertSame(2, $this->migrator->getVersion());
+
+		$source = $this->createMock(IImportSource::class);
+		$source->method('getMigratorVersion')->with('deck')->willReturnOnConsecutiveCalls(1, 2, 3);
+
+		$this->assertTrue($this->migrator->canImport($source));
+		$this->assertTrue($this->migrator->canImport($source));
+		$this->assertFalse($this->migrator->canImport($source));
+	}
+
+	public function testExportIncludesCommentNoteType(): void {
+		$user = $this->createConfiguredMock(IUser::class, ['getUID' => 'admin']);
+		$board = new Board();
+		$board->setId(42);
+		$stack = new Stack();
+		$stack->setId(7);
+		$card = new Card();
+		$card->setId(10);
+		$card->setStackId(7);
+		$stack->setCards([$card]);
+		$board->setStacks([$stack]);
+
+		$comment = $this->createMock(IComment::class);
+		$comment->method('getId')->willReturn('5');
+		$comment->method('getParentId')->willReturn('0');
+		$comment->method('getActorType')->willReturn('users');
+		$comment->method('getActorId')->willReturn('admin');
+		$comment->method('getMessage')->willReturn('Decision made');
+		$comment->method('getCreationDateTime')->willReturn(new \DateTime('2026-08-05T10:00:00+00:00'));
+		$comment->method('getObjectType')->willReturn('deckCard');
+		$comment->method('getObjectId')->willReturn('10');
+		$comment->method('getVerb')->willReturn('comment');
+		$comment->method('getMetaData')->willReturn(['deck.noteType' => 'decision']);
+
+		$this->boardMapper->method('findAllByUser')->with('admin')->willReturn([$board]);
+		$this->boardService->method('export')->with(42)->willReturn($board);
+		$this->cardMapper->method('findAllArchivedForStacks')->willReturn([]);
+		$this->commentsManager->method('getForObject')->with('deckCard', '10')->willReturn(new \ArrayIterator([$comment]));
+		$this->shareFileAttachmentExportService->method('exportCardAttachments')->willReturn([]);
+
+		$destination = $this->createMock(IExportDestination::class);
+		$destination->expects($this->once())->method('addFileContents')->with(
+			'boards.json',
+			$this->callback(static function (string $json): bool {
+				$comments = json_decode($json, true)['boards'][0]['stacks'][0]['cards'][0]['comments'] ?? [];
+				return ($comments[0]['noteType'] ?? null) === 'decision';
+			}),
+		);
+
+		$this->migrator->export($user, $destination, $this->createMock(OutputInterface::class));
 	}
 
 	public function testImportConfiguresServiceAndImports(): void {

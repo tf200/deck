@@ -20,6 +20,7 @@ use OCA\Deck\Db\LabelMapper;
 use OCA\Deck\Db\StackMapper;
 use OCA\Deck\NoPermissionException;
 use OCA\Deck\Service\BoardService;
+use OCA\Deck\Service\CommentType;
 use OCA\Deck\Service\Importer\BoardImportService;
 use OCA\Deck\Service\PermissionService;
 use OCA\Deck\Service\ShareFileAttachmentExportService;
@@ -31,11 +32,10 @@ use OCP\UserMigration\IExportDestination;
 use OCP\UserMigration\IImportSource;
 use OCP\UserMigration\IMigrator;
 use OCP\UserMigration\ISizeEstimationMigrator;
-use OCP\UserMigration\TMigratorBasicVersionHandling;
 use Symfony\Component\Console\Output\OutputInterface;
 
 class DeckMigrator implements IMigrator, ISizeEstimationMigrator {
-	use TMigratorBasicVersionHandling;
+	private const FORMAT_VERSION = 2;
 
 	protected const FILE_BOARDS = 'boards.json';
 
@@ -65,6 +65,15 @@ class DeckMigrator implements IMigrator, ISizeEstimationMigrator {
 	 */
 	public function getEstimatedExportSize(IUser $user): int|float {
 		return 0;
+	}
+
+	public function getVersion(): int {
+		return self::FORMAT_VERSION;
+	}
+
+	public function canImport(IImportSource $importSource): bool {
+		$version = $importSource->getMigratorVersion($this->getId());
+		return $version === null || $version <= self::FORMAT_VERSION;
 	}
 
 	/**
@@ -218,6 +227,7 @@ class DeckMigrator implements IMigrator, ISizeEstimationMigrator {
 				'objectType' => $comment->getObjectType(),
 				'objectId' => $comment->getObjectId(),
 				'verb' => $comment->getVerb(),
+				'noteType' => CommentType::normalize(($comment->getMetaData() ?? [])[CommentType::METADATA_KEY] ?? null),
 			];
 		}
 

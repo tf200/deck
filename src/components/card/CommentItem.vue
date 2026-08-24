@@ -30,6 +30,9 @@
 			<span class="username">
 				{{ comment.actorDisplayName }}
 			</span>
+			<span class="comment-type">
+				{{ noteTypeLabel(comment.noteType) }}
+			</span>
 			<NcActions v-show="!edit" :force-menu="true">
 				<NcActionButton :close-after-click="true" @click="replyTo()">
 					<template #icon>
@@ -71,6 +74,7 @@
 		</div>
 		<CommentForm v-if="edit"
 			v-model="commentMsg"
+			:note-type="comment.noteType"
 			dir="auto"
 			@submit="updateComment" />
 	</li>
@@ -84,6 +88,7 @@ import md5 from 'blueimp-md5'
 import relativeDate from '../../mixins/relativeDate.js'
 import ReplyIcon from 'vue-material-design-icons/ReplyOutline.vue'
 import moment from 'moment'
+import { commentTypeLabel } from '../../constants/comment-types.js'
 
 const AtMention = {
 	name: 'AtMention',
@@ -178,6 +183,7 @@ export default {
 	},
 
 	methods: {
+		noteTypeLabel: commentTypeLabel,
 		replyTo() {
 			this.$store.dispatch('setReplyTo', this.comment)
 		},
@@ -189,11 +195,12 @@ export default {
 			this.commentMsg = ''
 			this.edit = false
 		},
-		async updateComment() {
+		async updateComment(content, noteType) {
 			const data = {
-				comment: this.commentMsg,
+				comment: content,
 				cardId: this.comment.objectId,
 				id: this.comment.id,
+				noteType,
 			}
 			await this.$store.dispatch('updateComment', data)
 			this.hideUpdateForm()
@@ -253,6 +260,17 @@ export default {
 		.comment--content {
 			margin: 0;
 		}
+	}
+
+	.comment-type {
+		margin-inline-start: 8px;
+		padding: 2px 7px;
+		border-radius: 999px;
+		background: var(--color-primary-element-light);
+		color: var(--color-primary-element);
+		font-size: 11px;
+		font-weight: 600;
+		white-space: nowrap;
 	}
 
 	.comment--content:deep {

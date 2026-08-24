@@ -8,6 +8,7 @@
 namespace OCA\Deck\Controller;
 
 use OCA\Deck\Service\CommentService;
+use OCA\Deck\Service\CommentType;
 use OCA\Deck\StatusException;
 use OCP\AppFramework\Http\Attribute\NoAdminRequired;
 use OCP\AppFramework\Http\DataResponse;
@@ -42,16 +43,16 @@ class CommentsApiController extends OCSController {
 	 * @throws StatusException
 	 */
 	#[NoAdminRequired]
-	public function create(int $cardId, string $message, int $parentId = 0): DataResponse {
-		return $this->commentService->create($cardId, $message, $parentId);
+	public function create(int $cardId, string $message, int $parentId = 0, string $noteType = CommentType::DEFAULT): DataResponse {
+		return $this->commentService->create($cardId, $message, $parentId, $noteType);
 	}
 
 	/**
 	 * @throws StatusException
 	 */
 	#[NoAdminRequired]
-	public function update(int $cardId, int $commentId, string $message): DataResponse {
-		return $this->commentService->update($cardId, $commentId, $message);
+	public function update(int $cardId, int $commentId, string $message, ?string $noteType = null): DataResponse {
+		return $this->commentService->update($cardId, $commentId, $message, $noteType);
 	}
 
 	/**

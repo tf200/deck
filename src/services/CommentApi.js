@@ -21,17 +21,19 @@ export class CommentApi {
 		return api.data.ocs.data
 	}
 
-	async createComment({ cardId, comment, replyTo }) {
+	async createComment({ cardId, comment, replyTo, noteType }) {
 		const api = await axios.post(generateOcsUrl(`apps/deck/api/v1.0/cards/${cardId}/comments`), {
 			message: `${comment}`,
 			parentId: replyTo ? replyTo.id : null,
+			noteType,
 		})
 		return api.data.ocs.data
 	}
 
-	async updateComment({ cardId, id, comment }) {
+	async updateComment({ cardId, id, comment, noteType }) {
 		const api = await axios.put(generateOcsUrl(`apps/deck/api/v1.0/cards/${cardId}/comments/${id}`), {
 			message: `${comment}`,
+			noteType,
 		})
 		return api.data.ocs.data
 	}

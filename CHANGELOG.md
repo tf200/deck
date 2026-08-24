@@ -5,6 +5,10 @@
 # Changelog
 All notable changes to this project will be documented in this file.
 
+## 1.18.4
+### Added
+* Add classifications for shared card comments
+
 ## 1.18.1
 ### Fixed
 * [stable34] fix: use unknownActivityException by @backportbot[bot] in https://github.com/nextcloud/deck/pull/8034
@@ -993,4 +997,3 @@ Android app team for helping to improve our REST API:
 - Assign labels
 - Markdown notes for each card
 - Archive cards
-

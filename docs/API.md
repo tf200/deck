@@ -103,6 +103,7 @@ If available the ETag will also be part of JSON response objects as shown below 
 
 - Deck >=1.0.0: The maximum length of the card title has been extended from 100 to 255 characters
 - Deck >=1.0.0: The API will now return a 400 Bad request response if the length limitation of a board, stack or card title is exceeded
+- Deck >=1.18.4: Card comments include an optional `noteType` classification
 
 ## API version 1.1
 
@@ -1235,6 +1236,7 @@ A list of comments will be provided under the `ocs.data` key. If no or no more c
         "actorType": "users",
         "actorDisplayName": "Administrator",
         "creationDateTime": "2020-03-10T10:23:07+00:00",
+        "noteType": "general",
         "mentions": [
           {
             "mentionId": "alice",
@@ -1297,6 +1299,7 @@ In case a comment is marked as a reply to another comment object, the parent com
 | cardId    | Integer | The id of the card                      |
 | message     | String | The message of the comment, maximum length is limited to 1000 characters |
 | parentId    | Integer | _(optional)_ The start offset used for pagination, defaults to null |
+| noteType    | String | _(optional)_ One of `general`, `customer`, `internal`, `decision`, `risk_blocker`, `action_point`, `technical`, or `audit` |
 
 Mentions will be parsed by the server. The server will return a list of mentions in the response to this request as shown below.
 
@@ -1304,7 +1307,7 @@ Mentions will be parsed by the server. The server will return a list of mentions
 curl -X POST 'https://admin:admin@nextcloud/ocs/v2.php/apps/deck/api/v1.0/cards/12/comments' \
     -H 'Accept: application/json' -H 'OCS-APIRequest: true'
     -H 'Content-Type: application/json;charset=utf-8'
-    --data '{"message":"My message to @bob","parentId":null}'
+    --data '{"message":"My message to @bob","parentId":null,"noteType":"general"}'
 ```
 
 #### Response
@@ -1329,6 +1332,7 @@ A list of comments will be provided under the `ocs.data` key. If no or no more c
       "actorType": "users",
       "actorDisplayName": "Administrator",
       "creationDateTime": "2020-03-10T10:30:17+00:00",
+      "noteType": "general",
       "mentions": [
         {
           "mentionId": "bob",
@@ -1361,16 +1365,17 @@ A not found response might be returned if:
 | cardId    | Integer | The id of the card                      |
 | commentId    | Integer | The id of the comment                      |
 | message     | String | The message of the comment, maximum length is limited to 1000 characters |
+| noteType    | String | _(optional)_ One of `general`, `customer`, `internal`, `decision`, `risk_blocker`, `action_point`, `technical`, or `audit`. If omitted, the current type is preserved. |
 
 Mentions will be parsed by the server. The server will return a list of mentions in the response to this request as shown below.
 
 Updating comments is limited to the current user being the same as the comment author specified in the `actorId` of the comment.
 
 ```
-curl -X POST 'https://admin:admin@nextcloud/ocs/v2.php/apps/deck/api/v1.0/cards/12/comments' \
+curl -X PUT 'https://admin:admin@nextcloud/ocs/v2.php/apps/deck/api/v1.0/cards/12/comments/177' \
     -H 'Accept: application/json' -H 'OCS-APIRequest: true'
     -H 'Content-Type: application/json;charset=utf-8'
-    --data '{"message":"My message"}'
+    --data '{"message":"My message","noteType":"general"}'
 ```
 
 #### Response
@@ -1395,6 +1400,7 @@ A list of comments will be provided under the `ocs.data` key. If no or no more c
       "actorType": "users",
       "actorDisplayName": "Administrator",
       "creationDateTime": "2020-03-10T10:30:17+00:00",
+      "noteType": "general",
       "mentions": []
     }
   }
