@@ -6,6 +6,10 @@
 import { groupCardsByProject, projectGroupsToItems } from './projectGroups.js'
 
 describe('projectGroups', () => {
+	it.each([undefined, null, {}])('returns no groups when cards is %p', (cards) => {
+		expect(groupCardsByProject(cards)).toEqual([])
+	})
+
 	it('groups mapped boards under their project and keeps other cards unchanged', () => {
 		const cards = [
 			{ id: 1, boardId: 10 },

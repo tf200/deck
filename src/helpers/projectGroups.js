@@ -6,8 +6,9 @@
 export const groupCardsByProject = (cards = [], projectsByBoard = {}) => {
 	const projects = new Map()
 	const otherCards = []
+	const iterableCards = Array.isArray(cards) ? cards : []
 
-	for (const card of cards) {
+	for (const card of iterableCards) {
 		const project = projectsByBoard[String(card.boardId)]
 		if (!project) {
 			otherCards.push(card)
