@@ -47,7 +47,7 @@
 				</NcActionButton>
 			</NcActions>
 
-			<NcButton v-if="canEdit && !card.done"
+			<NcButton v-if="canEdit && !card.done && !completionByStack"
 				type="secondary"
 				class="completed-button"
 				:disabled="hasUnmetDependencies || !canVerify"
@@ -74,7 +74,7 @@
 				</span>
 			</div>
 			<div class="due-actions">
-				<NcButton v-if="canEdit && !card.archived"
+				<NcButton v-if="canEdit && !card.archived && !completionByStack"
 					type="tertiary"
 					:name="t('deck', 'Not done')"
 					:disabled="!canVerify"
@@ -96,6 +96,7 @@
 
 <script>
 import { defineComponent } from 'vue'
+import { mapGetters, mapState } from 'vuex'
 import {
 	NcActionButton,
 	NcActions,
@@ -113,7 +114,7 @@ import CalendarCheck from 'vue-material-design-icons/CalendarCheckOutline.vue'
 import CheckIcon from 'vue-material-design-icons/Check.vue'
 import ClearIcon from 'vue-material-design-icons/Close.vue'
 import CardDetailEntry from './CardDetailEntry.vue'
-import { canVerifyCard } from '../../utils/cardCapabilities.js'
+import { boardUsesStackCompletion, canVerifyCard } from '../../utils/cardCapabilities.js'
 
 export default defineComponent({
 	name: 'DueDateSelector',
@@ -163,8 +164,26 @@ export default defineComponent({
 		}
 	},
 	computed: {
+		...mapState({
+			currentBoard: state => state.currentBoard,
+		}),
+		...mapGetters(['boardById', 'stackById']),
 		canVerify() {
 			return canVerifyCard(this.card)
+		},
+		completionByStack() {
+			const boardId = this.card?.boardId ?? this.stackById(this.card?.stackId)?.boardId
+			if (boardId == null) {
+				return boardUsesStackCompletion(this.currentBoard)
+			}
+
+			const board = this.boardById(boardId) ?? this.boardById(Number(boardId))
+			if (board) {
+				return boardUsesStackCompletion(board)
+			}
+
+			return Number(this.currentBoard?.id) === Number(boardId)
+				&& boardUsesStackCompletion(this.currentBoard)
 		},
 		hasUnmetDependencies() {
 			return this.$store.getters.hasUnmetDependencies(this.card)

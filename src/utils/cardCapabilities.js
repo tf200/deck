@@ -11,6 +11,8 @@ const isSameId = (first, second) => first !== null
 
 export const canVerifyCard = card => card?.canVerify !== false
 
+export const boardUsesStackCompletion = board => board?.completionByStack === true
+
 export const hasCardMoveCapability = card => card?.canMove !== false
 	|| card?.canSign !== false
 	|| card?.canVerify !== false

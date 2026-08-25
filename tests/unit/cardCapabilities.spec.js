@@ -3,7 +3,12 @@
  * SPDX-License-Identifier: AGPL-3.0-or-later
  */
 
-import { canMoveCardToStack, canVerifyCard, hasCardMoveCapability } from '../../src/utils/cardCapabilities.js'
+import {
+	boardUsesStackCompletion,
+	canMoveCardToStack,
+	canVerifyCard,
+	hasCardMoveCapability,
+} from '../../src/utils/cardCapabilities.js'
 
 describe('card capabilities', () => {
 	const board = { approvedStackId: 20, doneStackId: 30 }
@@ -32,5 +37,11 @@ describe('card capabilities', () => {
 		const card = { stackId: 20, canMove: false, canSign: true, canVerify: true }
 
 		expect(canMoveCardToStack(card, board, 20)).toBe(false)
+	})
+
+	test('identifies boards where completion is controlled by the done stack', () => {
+		expect(boardUsesStackCompletion({ completionByStack: true })).toBe(true)
+		expect(boardUsesStackCompletion({ completionByStack: false })).toBe(false)
+		expect(boardUsesStackCompletion()).toBe(false)
 	})
 })

@@ -84,7 +84,7 @@ import { showUndo } from '@nextcloud/dialogs'
 import '@nextcloud/dialogs/style.css'
 import { emit } from '@nextcloud/event-bus'
 import { useActionsStore } from '../../stores/actions.js'
-import { canVerifyCard, hasCardMoveCapability } from '../../utils/cardCapabilities.js'
+import { boardUsesStackCompletion, canVerifyCard, hasCardMoveCapability } from '../../utils/cardCapabilities.js'
 
 export default {
 	name: 'CardMenuEntries',
@@ -139,8 +139,8 @@ export default {
 			return this.stackById(this.card.stackId)?.isDoneColumn === true
 		},
 		completionByStack() {
-			return this.boardById(this.boardId)?.completionByStack === true
-				|| (this.currentBoard?.id === this.boardId && this.currentBoard.completionByStack === true)
+			return boardUsesStackCompletion(this.boardById(this.boardId))
+				|| (Number(this.currentBoard?.id) === Number(this.boardId) && boardUsesStackCompletion(this.currentBoard))
 		},
 		hasUnmetDependencies() {
 			return this.$store.getters.hasUnmetDependencies(this.card)

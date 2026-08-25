@@ -10,7 +10,7 @@
 		<div class="selector-wrapper--selector">
 			<ul v-if="selectedDependentCards.length > 0" class="dependency-list">
 				<li v-for="dependentCard in selectedDependentCards" :key="dependentCard.id" class="dependency-item">
-					<NcButton v-if="isEditable && !dependentCard.done"
+					<NcButton v-if="isEditable && !dependentCard.done && !usesStackCompletion(dependentCard)"
 						type="button"
 						:aria-label="t('deck', 'Mark as done')"
 						:title="t('deck', 'Mark as done')"
@@ -19,7 +19,7 @@
 							<CircleOutline :size="16" />
 						</template>
 					</NcButton>
-					<NcButton v-if="isEditable && dependentCard.done"
+					<NcButton v-if="isEditable && dependentCard.done && !usesStackCompletion(dependentCard)"
 						type="button"
 						:aria-label="t('deck', 'Mark as not done')"
 						:title="t('deck', 'Mark as not done')"
@@ -97,6 +97,7 @@ import CheckCircle from 'vue-material-design-icons/CheckCircle.vue'
 import Close from 'vue-material-design-icons/Close.vue'
 import Plus from 'vue-material-design-icons/Plus.vue'
 import CardDetailEntry from './CardDetailEntry.vue'
+import { boardUsesStackCompletion } from '../../utils/cardCapabilities.js'
 
 export default defineComponent({
 	name: 'DependentCardsSelector',
@@ -128,8 +129,9 @@ export default defineComponent({
 	computed: {
 		...mapState({
 			cards: state => state.card.cards,
+			currentBoard: state => state.currentBoard,
 		}),
-		...mapGetters(['cardById', 'stackById']),
+		...mapGetters(['boardById', 'cardById', 'stackById']),
 		isEditable() {
 			return this.canEdit && !this.card?.done && !this.card?.archived
 		},
@@ -183,6 +185,20 @@ export default defineComponent({
 
 			const stack = this.stackById(card.stackId)
 			return stack?.boardId ?? null
+		},
+		usesStackCompletion(card) {
+			const boardId = this.getCardBoardId(card)
+			if (boardId == null) {
+				return boardUsesStackCompletion(this.currentBoard)
+			}
+
+			const board = this.boardById(boardId) ?? this.boardById(Number(boardId))
+			if (board) {
+				return boardUsesStackCompletion(board)
+			}
+
+			return Number(this.currentBoard?.id) === Number(boardId)
+				&& boardUsesStackCompletion(this.currentBoard)
 		},
 		openCard(dependentCard) {
 			if (!dependentCard?.id) {
