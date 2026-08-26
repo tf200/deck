@@ -698,6 +698,7 @@ class CardService {
 		if ($card->getArchived()) {
 			throw new StatusException('Operation not allowed. This card is archived.');
 		}
+		$this->assertLabelsCanBeChanged($card);
 		$label = $this->labelMapper->find($labelId);
 		if ($label->getBoardId() !== $this->cardMapper->findBoardId($card->getId())) {
 			throw new StatusException('Operation not allowed. Label does not exist.');
@@ -730,6 +731,7 @@ class CardService {
 		if ($card->getArchived()) {
 			throw new StatusException('Operation not allowed. This card is archived.');
 		}
+		$this->assertLabelsCanBeChanged($card);
 		$label = $this->labelMapper->find($labelId);
 		$this->cardMapper->removeLabel($cardId, $labelId);
 		$this->changeHelper->cardChanged($cardId);
@@ -737,6 +739,12 @@ class CardService {
 
 		$this->eventDispatcher->dispatchTyped(new CardUpdatedEvent($card));
 		return $card;
+	}
+
+	private function assertLabelsCanBeChanged(Card $card): void {
+		if ($this->cardAccessPolicyIntegration->isCombiProjectCard($card)) {
+			throw new NoPermissionException('Tags cannot be changed on cards in a Combi project.');
+		}
 	}
 
 	public function getCardUrl(int $cardId): string {

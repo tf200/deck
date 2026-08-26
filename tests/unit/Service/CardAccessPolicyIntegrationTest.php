@@ -57,6 +57,40 @@ final class CardAccessPolicyIntegrationTest extends TestCase {
 		], $integration->getCapabilities(new Card(), 'alice'));
 	}
 
+	public function testCombiProjectCardDefaultsToFalseWithoutProvider(): void {
+		$integration = new CardAccessPolicyIntegration($this->createMock(LoggerInterface::class));
+		$this->setProvider($integration, null);
+
+		$this->assertFalse($integration->isCombiProjectCard(new Card()));
+	}
+
+	public function testCombiProjectCardStatusIsDelegatedToProvider(): void {
+		$integration = new CardAccessPolicyIntegration($this->createMock(LoggerInterface::class));
+		$provider = new class {
+			public function isCombiProjectCard(Card $card): bool {
+				return $card->getId() === 42;
+			}
+		};
+		$this->setProvider($integration, $provider);
+		$card = new Card();
+		$card->setId(42);
+
+		$this->assertTrue($integration->isCombiProjectCard($card));
+	}
+
+	public function testCombiProjectCardDefaultsToFalseWhenProviderFails(): void {
+		$logger = $this->createMock(LoggerInterface::class);
+		$logger->expects($this->once())->method('debug');
+		$integration = new CardAccessPolicyIntegration($logger);
+		$this->setProvider($integration, new class {
+			public function isCombiProjectCard(Card $card): bool {
+				throw new \RuntimeException('Project tables are unavailable');
+			}
+		});
+
+		$this->assertFalse($integration->isCombiProjectCard(new Card()));
+	}
+
 	private function setProvider(CardAccessPolicyIntegration $integration, ?object $provider): void {
 		$resolved = new \ReflectionProperty($integration, 'resolved');
 		$resolved->setValue($integration, true);

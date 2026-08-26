@@ -699,6 +699,21 @@ class CardServiceTest extends TestCase {
 		$this->cardService->assignLabel(123, 999);
 	}
 
+	public function testAssignLabelRejectedForCombiProjectCard(): void {
+		$card = new Card();
+		$card->setId(123);
+		$this->cardMapper->method('find')->with(123)->willReturn($card);
+		$this->cardAccessPolicyIntegration->expects($this->once())
+			->method('isCombiProjectCard')
+			->with($card)
+			->willReturn(true);
+		$this->cardMapper->expects($this->never())->method('assignLabel');
+		$this->labelMapper->expects($this->never())->method('find');
+
+		$this->expectException(NoPermissionException::class);
+		$this->cardService->assignLabel(123, 999);
+	}
+
 	public function testRemoveLabel() {
 		$card = new Card();
 		$card->setArchived(false);
@@ -719,6 +734,21 @@ class CardServiceTest extends TestCase {
 		$this->cardMapper->expects($this->once())->method('find')->willReturn($card);
 		$this->cardMapper->expects($this->never())->method('removeLabel');
 		$this->expectException(StatusException::class);
+		$this->cardService->removeLabel(123, 999);
+	}
+
+	public function testRemoveLabelRejectedForCombiProjectCard(): void {
+		$card = new Card();
+		$card->setId(123);
+		$this->cardMapper->method('find')->with(123)->willReturn($card);
+		$this->cardAccessPolicyIntegration->expects($this->once())
+			->method('isCombiProjectCard')
+			->with($card)
+			->willReturn(true);
+		$this->cardMapper->expects($this->never())->method('removeLabel');
+		$this->labelMapper->expects($this->never())->method('find');
+
+		$this->expectException(NoPermissionException::class);
 		$this->cardService->removeLabel(123, 999);
 	}
 

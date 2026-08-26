@@ -7,7 +7,7 @@
 	<div v-if="copiedCard">
 		<TagSelector :card="card"
 			:labels="currentBoard.labels"
-			:disabled="!canEdit"
+			:disabled="!canEdit || isCombiBoard"
 			@select="addLabelToCard"
 			@remove="removeLabelFromCard"
 			@newtag="addLabelToBoardAndCard" />
@@ -65,6 +65,7 @@ import DueDateSelector from './DueDateSelector.vue'
 import StartDateSelector from './StartDateSelector.vue'
 import { debounce } from 'lodash'
 import DependentCardsSelector from './DependentCardsSelector.vue'
+import { isCombiProjectBoard } from '../../utils/cardCapabilities.js'
 
 export default {
 	name: 'CardSidebarTabDetails',
@@ -97,6 +98,9 @@ export default {
 			currentBoard: state => state.currentBoard,
 		}),
 		...mapGetters(['canEdit', 'assignables']),
+		isCombiBoard() {
+			return isCombiProjectBoard(this.currentBoard)
+		},
 		cardDetailsInModal: {
 			get() {
 				return this.$store.getters.config('cardDetailsInModal')

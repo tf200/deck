@@ -12,7 +12,7 @@
 		@keydown.esc="close">
 		<CardItem :card="card" />
 		<DueDateSelector v-if="selector === 'due-date'" :card="card" :can-edit="true" />
-		<TagSelector v-if="selector === 'tag'" :card="card" :can-edit="true" />
+		<TagSelector v-if="selector === 'tag' && !isCombiBoard" :card="card" :can-edit="true" />
 		<AssignmentSelector v-if="selector === 'assignment'" :card="card" :can-edit="true" />
 	</div>
 </template>
@@ -23,6 +23,7 @@ import { mapState } from 'vuex'
 import TagSelector from './card/TagSelector.vue'
 import AssignmentSelector from './card/AssignmentSelector.vue'
 import CardItem from './cards/CardItem.vue'
+import { isCombiProjectBoard } from '../utils/cardCapabilities.js'
 
 export default {
 	name: 'KeyboardShortcuts',
@@ -44,6 +45,9 @@ export default {
 		...mapState({
 			board: state => state.currentBoard,
 		}),
+		isCombiBoard() {
+			return isCombiProjectBoard(this.board)
+		},
 	},
 	created() {
 		document.addEventListener('keydown', this.onKeydown)
@@ -252,6 +256,10 @@ export default {
 			this.$refs.shortcutModal?.focus()
 		},
 		handleShowLabel({ card, element }) {
+			if (this.isCombiBoard) {
+				return
+			}
+
 			// this.cardTop = element.getBoundingClientRect().top + 'px'
 			// this.cardLeft = element.getBoundingClientRect().left + 'px'
 			this.card = card

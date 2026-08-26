@@ -46,6 +46,20 @@ class CardAccessPolicyIntegration {
 		return $this->getProvider()?->usesStackCompletion($card) ?? false;
 	}
 
+	public function isCombiProjectCard(Card $card): bool {
+		$provider = $this->getProvider();
+		if ($provider === null || !method_exists($provider, 'isCombiProjectCard')) {
+			return false;
+		}
+
+		try {
+			return $provider->isCombiProjectCard($card);
+		} catch (\Throwable $e) {
+			$this->logger->debug('Combi project card status is unavailable', ['exception' => $e]);
+			return false;
+		}
+	}
+
 	/**
 	 * @return array{canMove: bool, canSign: bool, canVerify: bool}
 	 */

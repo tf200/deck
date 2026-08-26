@@ -13,6 +13,9 @@ export const canVerifyCard = card => card?.canVerify !== false
 
 export const boardUsesStackCompletion = board => board?.completionByStack === true
 
+export const isCombiProjectBoard = board => board?.isProjectBoard === true
+	&& Number(board?.projectType) === 0
+
 export const hasCardMoveCapability = card => card?.canMove !== false
 	|| card?.canSign !== false
 	|| card?.canVerify !== false

@@ -8,6 +8,7 @@ import {
 	canMoveCardToStack,
 	canVerifyCard,
 	hasCardMoveCapability,
+	isCombiProjectBoard,
 } from '../../src/utils/cardCapabilities.js'
 
 describe('card capabilities', () => {
@@ -43,5 +44,13 @@ describe('card capabilities', () => {
 		expect(boardUsesStackCompletion({ completionByStack: true })).toBe(true)
 		expect(boardUsesStackCompletion({ completionByStack: false })).toBe(false)
 		expect(boardUsesStackCompletion()).toBe(false)
+	})
+
+	test('identifies Combi project boards independently of stack completion', () => {
+		expect(isCombiProjectBoard({ isProjectBoard: true, projectType: 0, completionByStack: false })).toBe(true)
+		expect(isCombiProjectBoard({ isProjectBoard: true, projectType: '0' })).toBe(true)
+		expect(isCombiProjectBoard({ isProjectBoard: false, projectType: 0 })).toBe(false)
+		expect(isCombiProjectBoard({ isProjectBoard: true, projectType: 1 })).toBe(false)
+		expect(isCombiProjectBoard()).toBe(false)
 	})
 })
