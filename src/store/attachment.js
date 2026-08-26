@@ -64,6 +64,16 @@ export default {
 
 	},
 	actions: {
+		registerAttachment({ commit, state }, { cardId, attachment }) {
+			const exists = state.attachments[cardId]?.some(existing => existing.id === attachment.id && existing.type === attachment.type)
+			if (exists) {
+				commit('updateAttachment', { cardId, attachment })
+				return
+			}
+			commit('createAttachment', { cardId, attachment })
+			commit('cardIncreaseAttachmentCount', cardId)
+		},
+
 		async fetchAttachments({ commit, rootState }, cardId) {
 			const boardId = rootState.currentBoard.id
 			const attachments = await apiClient.fetchAttachments(cardId, boardId)

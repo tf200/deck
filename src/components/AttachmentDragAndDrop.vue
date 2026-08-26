@@ -60,6 +60,10 @@ export default {
 			type: Number,
 			default: null,
 		},
+		deferUpload: {
+			type: Boolean,
+			default: false,
+		},
 	},
 	data() {
 		return {
@@ -89,7 +93,12 @@ export default {
 			if (this.isReadOnly) {
 				return
 			}
-			const files = event.dataTransfer.files
+			const files = Array.from(event.dataTransfer.files || [])
+			if (this.deferUpload) {
+				this.$emit('files-dropped', files)
+				event.dataTransfer.value = ''
+				return
+			}
 			for (const file of files) {
 				this.onLocalAttachmentSelected(file, 'file')
 			}

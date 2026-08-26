@@ -217,6 +217,28 @@ class AttachmentService {
 	}
 
 	/**
+	 * Populate the response metadata for an attachment created by an integration.
+	 */
+	public function enrichAttachment(Attachment $attachment): Attachment {
+		$service = $this->getService($attachment->getType());
+		$service->extendData($attachment);
+		$this->addCreator($attachment);
+
+		return $attachment;
+	}
+
+	/**
+	 * Emit the same side effects as the regular attachment creation flow.
+	 */
+	public function postAttachmentCreated(Attachment $attachment): Attachment {
+		$this->attachmentCacheHelper->clearAttachmentCount((int)$attachment->getCardId());
+		$this->changeHelper->cardChanged($attachment->getCardId());
+		$this->activityManager->triggerEvent(ActivityManager::DECK_OBJECT_CARD, $attachment, ActivityManager::SUBJECT_ATTACHMENT_CREATE);
+
+		return $attachment;
+	}
+
+	/**
 	 * Display the attachment
 	 *
 	 * @throws NoPermissionException
