@@ -52,7 +52,8 @@
 				:stacks="stacksByBoard" />
 			<ReportingDashboard v-else-if="!isEmpty && !loading && viewMode === 'reporting'"
 				key="reporting"
-				:board-id="board.id" />
+				:board-id="board.id"
+				:preloaded="true" />
 			<div v-else-if="!isEmpty && !loading"
 				key="board"
 				class="board-view"
