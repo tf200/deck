@@ -248,7 +248,7 @@
 						{{ t('deck', 'Reporting view') }}
 					</NcActionButton>
 					<NcActionSeparator />
-					<NcActionButton @click="toggleShowArchived">
+					<NcActionButton v-if="!isCombiProjectBoard" @click="toggleShowArchived">
 						<template #icon>
 							<ArchiveIcon :size="20" decorative />
 						</template>
