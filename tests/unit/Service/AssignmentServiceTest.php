@@ -29,8 +29,10 @@ use OCA\Deck\BadRequestException;
 use OCA\Deck\Db\AclMapper;
 use OCA\Deck\Db\Assignment;
 use OCA\Deck\Db\AssignmentMapper;
+use OCA\Deck\Db\Card;
 use OCA\Deck\Db\CardMapper;
 use OCA\Deck\Db\ChangeHelper;
+use OCA\Deck\NoPermissionException;
 use OCA\Deck\NotFoundException;
 use OCA\Deck\Notification\NotificationHelper;
 use OCA\Deck\Validators\AssignmentServiceValidator;
@@ -82,6 +84,10 @@ class AssignmentServiceTest extends TestCase {
 	 * @var AssignmentServiceValidator
 	 */
 	private $assignmentServiceValidator;
+	/**
+	 * @var MockObject|CardAccessPolicyIntegration
+	 */
+	private $cardAccessPolicyIntegration;
 
 
 	public function setUp(): void {
@@ -95,6 +101,8 @@ class AssignmentServiceTest extends TestCase {
 		$this->eventDispatcher = $this->createMock(IEventDispatcher::class);
 		$this->changeHelper = $this->createMock(ChangeHelper::class);
 		$this->assignmentServiceValidator = $this->createMock(AssignmentServiceValidator::class);
+		$this->cardAccessPolicyIntegration = $this->createMock(CardAccessPolicyIntegration::class);
+		$this->cardMapper->method('find')->willReturn(new Card());
 		$this->assignmentService = new AssignmentService(
 			$this->permissionService,
 			$this->cardMapper,
@@ -105,6 +113,7 @@ class AssignmentServiceTest extends TestCase {
 			$this->changeHelper,
 			$this->eventDispatcher,
 			$this->assignmentServiceValidator,
+			$this->cardAccessPolicyIntegration,
 			'admin'
 		);
 	}
@@ -147,6 +156,16 @@ class AssignmentServiceTest extends TestCase {
 			->willReturn($assignment);
 		$actual = $this->assignmentService->assignUser(123, 'admin');
 		$this->assertEquals($assignment, $actual);
+	}
+
+	public function testAssignUserRejectedForCombiProjectCard(): void {
+		$this->cardAccessPolicyIntegration->expects($this->once())
+			->method('isCombiProjectCard')
+			->willReturn(true);
+		$this->assignedUsersMapper->expects($this->never())->method('findAll');
+
+		$this->expectException(NoPermissionException::class);
+		$this->assignmentService->assignUser(123, 'admin');
 	}
 
 	public function testAssignUserNoParticipant() {
@@ -210,6 +229,16 @@ class AssignmentServiceTest extends TestCase {
 			->willReturn($assignment);
 		$actual = $this->assignmentService->unassignUser(123, 'admin');
 		$this->assertEquals($assignment, $actual);
+	}
+
+	public function testUnassignUserRejectedForCombiProjectCard(): void {
+		$this->cardAccessPolicyIntegration->expects($this->once())
+			->method('isCombiProjectCard')
+			->willReturn(true);
+		$this->assignedUsersMapper->expects($this->never())->method('findAll');
+
+		$this->expectException(NoPermissionException::class);
+		$this->assignmentService->unassignUser(123, 'admin');
 	}
 
 	public function testUnassignUserNotExisting() {

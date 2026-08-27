@@ -13,6 +13,7 @@ use OCA\Deck\Db\Acl;
 use OCA\Deck\Db\AclMapper;
 use OCA\Deck\Db\Assignment;
 use OCA\Deck\Db\AssignmentMapper;
+use OCA\Deck\Db\Card;
 use OCA\Deck\Db\CardMapper;
 use OCA\Deck\Db\ChangeHelper;
 use OCA\Deck\Event\CardUpdatedEvent;
@@ -35,6 +36,7 @@ class AssignmentService {
 		private readonly ChangeHelper $changeHelper,
 		private readonly IEventDispatcher $eventDispatcher,
 		private readonly AssignmentServiceValidator $assignmentServiceValidator,
+		private readonly CardAccessPolicyIntegration $cardAccessPolicyIntegration,
 		private readonly ?string $userId,
 	) {
 	}
@@ -53,6 +55,8 @@ class AssignmentService {
 		}
 
 		$this->permissionService->checkPermission($this->cardMapper, $cardId, Acl::PERMISSION_EDIT);
+		$card = $this->cardMapper->find($cardId);
+		$this->assertAssignmentsCanBeChanged($card);
 		$assignments = $this->assignedUsersMapper->findAll($cardId);
 		foreach ($assignments as $assignment) {
 			if ($assignment->getParticipant() === $userId && $assignment->getType() === $type) {
@@ -60,7 +64,6 @@ class AssignmentService {
 			}
 		}
 
-		$card = $this->cardMapper->find($cardId);
 		$boardId = $this->cardMapper->findBoardId($cardId);
 		$boardUsers = array_keys($this->permissionService->findUsers($boardId, true));
 		$acls = $this->aclMapper->findAll($boardId);
@@ -102,12 +105,13 @@ class AssignmentService {
 	public function unassignUser(int $cardId, string $userId, int $type = 0): Assignment {
 		$this->assignmentServiceValidator->check(compact('cardId', 'userId'));
 		$this->permissionService->checkPermission($this->cardMapper, $cardId, Acl::PERMISSION_EDIT);
+		$card = $this->cardMapper->find($cardId);
+		$this->assertAssignmentsCanBeChanged($card);
 
 		$assignments = $this->assignedUsersMapper->findAll($cardId);
 		foreach ($assignments as $assignment) {
 			if ($assignment->getParticipant() === $userId && $assignment->getType() === $type) {
 				$assignment = $this->assignedUsersMapper->delete($assignment);
-				$card = $this->cardMapper->find($cardId);
 				$this->activityManager->triggerEvent(ActivityManager::DECK_OBJECT_CARD, $card, ActivityManager::SUBJECT_CARD_USER_UNASSIGN, ['assigneduser' => $userId]);
 				if ($type === Assignment::TYPE_USER && $userId !== $this->userId) {
 					$this->notificationHelper->markCardAssignedAsRead($card, $userId);
@@ -121,5 +125,11 @@ class AssignmentService {
 			}
 		}
 		throw new NotFoundException('No assignment for ' . $userId . 'found.');
+	}
+
+	private function assertAssignmentsCanBeChanged(Card $card): void {
+		if ($this->cardAccessPolicyIntegration->isCombiProjectCard($card)) {
+			throw new NoPermissionException('Assignments cannot be changed on cards in a Combi project.');
+		}
 	}
 }

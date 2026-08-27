@@ -13,7 +13,7 @@
 		<CardItem :card="card" />
 		<DueDateSelector v-if="selector === 'due-date'" :card="card" :can-edit="true" />
 		<TagSelector v-if="selector === 'tag' && !isCombiBoard" :card="card" :can-edit="true" />
-		<AssignmentSelector v-if="selector === 'assignment'" :card="card" :can-edit="true" />
+		<AssignmentSelector v-if="selector === 'assignment' && !isCombiBoard" :card="card" :can-edit="true" />
 	</div>
 </template>
 <script>
@@ -249,6 +249,10 @@ export default {
 			this.$refs.shortcutModal?.focus()
 		},
 		handleShowAssignemnt({ card, element }) {
+			if (this.isCombiBoard) {
+				return
+			}
+
 			// this.cardTop = element.getBoundingClientRect().top + 'px'
 			// this.cardLeft = element.getBoundingClientRect().left + 'px'
 			this.card = card

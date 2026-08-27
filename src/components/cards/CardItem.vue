@@ -67,7 +67,7 @@
 				v-show="!compactMode"
 				class="card-controls compact-item"
 				@click="openCard">
-				<CardBadges :card="card">
+				<CardBadges :card="card" :hide-assignees="isCombiBoard">
 					<CardMenu v-if="showMenuAtBadges"
 						:card="card"
 						class="right"
@@ -90,6 +90,7 @@ import CardCover from './CardCover.vue'
 import DueDate from './badges/DueDate.vue'
 import { getCurrentUser } from '@nextcloud/auth'
 import { showError } from '../../helpers/errors.js'
+import { isCombiProjectBoard } from '../../utils/cardCapabilities.js'
 
 const TITLE_EDITING_STATE = {
 	OFF: 0,
@@ -155,6 +156,10 @@ export default {
 			const board = this.$store.getters.boards.find((item) => item.id === this.card.boardId)
 			return board ? !board.archived && board.permissions.PERMISSION_EDIT : false
 		},
+		isCombiBoard() {
+			return isCombiProjectBoard(this.board)
+				|| (Number(this.currentBoard?.id) === Number(this.card?.boardId) && isCombiProjectBoard(this.currentBoard))
+		},
 		card() {
 			return this.item ? this.item : this.$store.getters.cardById(this.id)
 		},
@@ -178,7 +183,7 @@ export default {
 				|| this.card.commentsCount > 0
 				|| this.card.description
 				|| this.card.attachmentCount > 0
-				|| this.card.assignedUsers.length > 0
+				|| (!this.isCombiBoard && this.card.assignedUsers.length > 0)
 		},
 		idBadge() {
 			return this.$store.getters.config('cardIdBadge')
@@ -306,6 +311,10 @@ export default {
 			this.$nextTick(() => this.$store.dispatch('toggleFilter', { tags: [label.id] }))
 		},
 		toggleSelfAsignment() {
+			if (this.isCombiBoard) {
+				return
+			}
+
 			const isAssigned = this.card.assignedUsers.find(
 				(item) => item.type === 0 && item.participant.uid === getCurrentUser()?.uid,
 			)

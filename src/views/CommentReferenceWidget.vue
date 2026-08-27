@@ -56,9 +56,9 @@
 					:use-markdown="true"
 					@click.native="shortDescription = !shortDescription" />
 			</div>
-			<div v-if="card.assignedUsers .length > 0"
+			<div v-if="!isCombiBoard && card.assignedUsers.length > 0"
 				class="spacer" />
-			<AvatarList v-if="card.assignedUsers .length > 0"
+			<AvatarList v-if="!isCombiBoard && card.assignedUsers.length > 0"
 				:users="card.assignedUsers"
 				class="card-assignees" />
 		</div>
@@ -90,6 +90,7 @@ import labelStyle from '../mixins/labelStyle.js'
 import { NcRichText } from '@nextcloud/vue'
 import moment from '@nextcloud/moment'
 import { generateUrl } from '@nextcloud/router'
+import { isCombiProjectBoard } from '../utils/cardCapabilities.js'
 
 export default {
 	name: 'CommentReferenceWidget',
@@ -134,6 +135,9 @@ export default {
 		},
 		board() {
 			return this.richObject.board
+		},
+		isCombiBoard() {
+			return isCombiProjectBoard(this.board)
 		},
 		stack() {
 			return this.richObject.stack

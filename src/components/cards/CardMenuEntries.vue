@@ -23,13 +23,13 @@
 			</template>
 			{{ t('deck', 'Edit title') }}
 		</NcActionButton>
-		<NcActionButton v-if="canEdit && !isCurrentUserAssigned"
+		<NcActionButton v-if="canEdit && !isCombiBoard && !isCurrentUserAssigned"
 			icon="icon-user"
 			:close-after-click="true"
 			@click="assignCardToMe()">
 			{{ t('deck', 'Assign to me') }}
 		</NcActionButton>
-		<NcActionButton v-if="canEdit && isCurrentUserAssigned"
+		<NcActionButton v-if="canEdit && !isCombiBoard && isCurrentUserAssigned"
 			icon="icon-user"
 			:close-after-click="true"
 			@click="unassignCardFromMe()">
@@ -84,7 +84,7 @@ import { showUndo } from '@nextcloud/dialogs'
 import '@nextcloud/dialogs/style.css'
 import { emit } from '@nextcloud/event-bus'
 import { useActionsStore } from '../../stores/actions.js'
-import { boardUsesStackCompletion, canVerifyCard, hasCardMoveCapability } from '../../utils/cardCapabilities.js'
+import { boardUsesStackCompletion, canVerifyCard, hasCardMoveCapability, isCombiProjectBoard } from '../../utils/cardCapabilities.js'
 
 export default {
 	name: 'CardMenuEntries',
@@ -141,6 +141,10 @@ export default {
 		completionByStack() {
 			return boardUsesStackCompletion(this.boardById(this.boardId))
 				|| (Number(this.currentBoard?.id) === Number(this.boardId) && boardUsesStackCompletion(this.currentBoard))
+		},
+		isCombiBoard() {
+			return isCombiProjectBoard(this.boardById(this.boardId))
+				|| (Number(this.currentBoard?.id) === Number(this.boardId) && isCombiProjectBoard(this.currentBoard))
 		},
 		hasUnmetDependencies() {
 			return this.$store.getters.hasUnmetDependencies(this.card)

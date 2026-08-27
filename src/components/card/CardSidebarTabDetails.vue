@@ -12,7 +12,8 @@
 			@remove="removeLabelFromCard"
 			@newtag="addLabelToBoardAndCard" />
 
-		<AssignmentSelector :card="card"
+		<AssignmentSelector v-if="!isCombiBoard"
+			:card="card"
 			:assignables="assignables"
 			:can-edit="canEdit"
 			@select="assignUserToCard"

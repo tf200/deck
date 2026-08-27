@@ -43,7 +43,7 @@
 		</div>
 
 		<div class="badge-right">
-			<NcAvatarList :users="card.assignedUsers" :size="32" />
+			<NcAvatarList v-if="!hideAssignees" :users="card.assignedUsers" :size="32" />
 
 			<slot />
 		</div>
@@ -77,6 +77,10 @@ export default {
 		card: {
 			type: Object,
 			default: null,
+		},
+		hideAssignees: {
+			type: Boolean,
+			default: false,
 		},
 	},
 	computed: {
