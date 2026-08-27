@@ -80,11 +80,12 @@ export default function storeFactory() {
 			viewMode: state => {
 				if (!state.currentBoard) return 'kanban'
 				if (state.viewModeByBoard[state.currentBoard.id] !== undefined) {
-					return state.viewModeByBoard[state.currentBoard.id]
+					const mode = state.viewModeByBoard[state.currentBoard.id]
+					return mode === 'reporting' ? 'kanban' : mode
 				}
 
 				const stored = localStorage.getItem(`deck.viewMode.${state.currentBoard.id}`)
-				return stored !== null ? stored : 'kanban'
+				return stored !== null && stored !== 'reporting' ? stored : 'kanban'
 			},
 			getFilter: state => {
 				return state.filter
