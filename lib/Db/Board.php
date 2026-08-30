@@ -80,6 +80,7 @@ class Board extends RelationalEntity {
 		$json['acl'] = $this->acl ?? [];
 		$json['labels'] = $this->labels ?? [];
 
+		$row = false;
 		try {
 			$db = \OCP\Server::get(\OCP\IDBConnection::class);
 			$qb = $db->getQueryBuilder();
@@ -89,8 +90,13 @@ class Board extends RelationalEntity {
 			$res = $qb->executeQuery();
 			$row = $res->fetch();
 			$res->closeCursor();
-			$policySettings = false;
-			if ($row !== false) {
+		} catch (\Throwable $e) {
+			$row = false;
+		}
+
+		$policySettings = false;
+		if ($row !== false) {
+			try {
 				$qb = $db->getQueryBuilder();
 				$qb->select('done_stack_id', 'approved_stack_id', 'policy_version')
 					->from('pc_board_policy_settings')
@@ -98,24 +104,19 @@ class Board extends RelationalEntity {
 				$res = $qb->executeQuery();
 				$policySettings = $res->fetch();
 				$res->closeCursor();
+			} catch (\Throwable $e) {
+				$policySettings = false;
 			}
-			$policySettings = is_array($policySettings) ? $policySettings : [];
-			$doneStackId = $policySettings['done_stack_id'] ?? null;
-			$approvedStackId = $policySettings['approved_stack_id'] ?? null;
-			$json['isProjectBoard'] = !empty($row);
-			$json['projectType'] = isset($row['type']) ? (int)$row['type'] : null;
-			$json['completionByStack'] = isset($row['type']) && $doneStackId !== null && (int)$row['type'] === 0;
-			$json['doneStackId'] = $doneStackId !== null ? (int)$doneStackId : null;
-			$json['approvedStackId'] = $approvedStackId !== null ? (int)$approvedStackId : null;
-			$json['policyVersion'] = isset($policySettings['policy_version']) ? (int)$policySettings['policy_version'] : 1;
-		} catch (\Throwable $e) {
-			$json['isProjectBoard'] = false;
-			$json['projectType'] = null;
-			$json['completionByStack'] = false;
-			$json['doneStackId'] = null;
-			$json['approvedStackId'] = null;
-			$json['policyVersion'] = 1;
 		}
+		$policySettings = is_array($policySettings) ? $policySettings : [];
+		$doneStackId = $policySettings['done_stack_id'] ?? null;
+		$approvedStackId = $policySettings['approved_stack_id'] ?? null;
+		$json['isProjectBoard'] = !empty($row);
+		$json['projectType'] = isset($row['type']) ? (int)$row['type'] : null;
+		$json['completionByStack'] = isset($row['type']) && $doneStackId !== null && (int)$row['type'] === 0;
+		$json['doneStackId'] = $doneStackId !== null ? (int)$doneStackId : null;
+		$json['approvedStackId'] = $approvedStackId !== null ? (int)$approvedStackId : null;
+		$json['policyVersion'] = isset($policySettings['policy_version']) ? (int)$policySettings['policy_version'] : 1;
 
 		return $json;
 	}

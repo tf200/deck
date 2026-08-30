@@ -714,6 +714,36 @@ class CardServiceTest extends TestCase {
 		$this->cardService->assignLabel(123, 999);
 	}
 
+	public function testSystemAssignLabelAllowedForCombiProjectCard(): void {
+		$card = new Card();
+		$card->setArchived(false);
+		$card->setId(123);
+		$label = new Label();
+		$label->setBoardId(1);
+		$this->cardMapper->expects($this->once())->method('find')->willReturn($card);
+		$this->cardMapper->expects($this->once())->method('findBoardId')->willReturn(1);
+		$this->cardMapper->expects($this->once())->method('assignLabel')->with(123, 999);
+		$this->labelMapper->expects($this->once())->method('find')->willReturn($label);
+		$this->cardAccessPolicyIntegration->expects($this->never())->method('isCombiProjectCard');
+
+		$this->cardService->assignLabelForSystem(123, 999);
+	}
+
+	public function testSystemAssignLabelRejectsLabelFromAnotherBoard(): void {
+		$card = new Card();
+		$card->setArchived(false);
+		$card->setId(123);
+		$label = new Label();
+		$label->setBoardId(2);
+		$this->cardMapper->expects($this->once())->method('find')->willReturn($card);
+		$this->cardMapper->expects($this->once())->method('findBoardId')->willReturn(1);
+		$this->cardMapper->expects($this->never())->method('assignLabel');
+		$this->labelMapper->expects($this->once())->method('find')->willReturn($label);
+
+		$this->expectException(StatusException::class);
+		$this->cardService->assignLabelForSystem(123, 999);
+	}
+
 	public function testRemoveLabel() {
 		$card = new Card();
 		$card->setArchived(false);

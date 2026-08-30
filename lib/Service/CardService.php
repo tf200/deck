@@ -686,6 +686,20 @@ class CardService {
 	 * @throws BadRequestException
 	 */
 	public function assignLabel(int $cardId, int $labelId): Card {
+		return $this->assignLabelInternal($cardId, $labelId, false);
+	}
+
+	/**
+	 * Assign a label while provisioning system-managed project cards.
+	 *
+	 * This is intentionally not exposed through a controller. User-initiated
+	 * label changes must continue to use assignLabel().
+	 */
+	public function assignLabelForSystem(int $cardId, int $labelId): Card {
+		return $this->assignLabelInternal($cardId, $labelId, true);
+	}
+
+	private function assignLabelInternal(int $cardId, int $labelId, bool $systemManaged): Card {
 		$this->cardServiceValidator->check(compact('cardId', 'labelId'));
 
 		$this->permissionService->checkPermission($this->cardMapper, $cardId, Acl::PERMISSION_EDIT);
@@ -698,7 +712,9 @@ class CardService {
 		if ($card->getArchived()) {
 			throw new StatusException('Operation not allowed. This card is archived.');
 		}
-		$this->assertLabelsCanBeChanged($card);
+		if (!$systemManaged) {
+			$this->assertLabelsCanBeChanged($card);
+		}
 		$label = $this->labelMapper->find($labelId);
 		if ($label->getBoardId() !== $this->cardMapper->findBoardId($card->getId())) {
 			throw new StatusException('Operation not allowed. Label does not exist.');

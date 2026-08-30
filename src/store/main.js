@@ -7,6 +7,7 @@ import 'url-search-params-polyfill'
 
 import { loadState } from '@nextcloud/initial-state'
 import Vue from 'vue'
+import { isCombiProjectBoard } from '../utils/cardCapabilities.js'
 import Vuex from 'vuex'
 import axios from '@nextcloud/axios'
 import { generateOcsUrl, generateUrl } from '@nextcloud/router'
@@ -140,7 +141,7 @@ export default function storeFactory() {
 				return state.currentBoard ? state.currentBoard.permissions.PERMISSION_SHARE : false
 			},
 			isCombiProjectBoard: state => {
-				return state.currentBoard?.isProjectBoard === true && state.currentBoard?.projectType === 0
+				return isCombiProjectBoard(state.currentBoard)
 			},
 			isArchived: state => {
 				return state.currentBoard && state.currentBoard.archived
