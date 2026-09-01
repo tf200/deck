@@ -13,6 +13,8 @@
 					class="range-filter__button"
 					:class="{ 'range-filter__button--active': selectedDays === filter.days }"
 					:aria-pressed="selectedDays === filter.days"
+					:title="filter.ariaLabel"
+					:aria-label="filter.ariaLabel"
 					@click="selectedDays = filter.days">
 					{{ filter.label }}
 				</button>
@@ -82,9 +84,21 @@ export default {
 		]),
 		filters() {
 			return [
-				{ days: 7, label: t('deck', 'Next 7 days') },
-				{ days: 30, label: t('deck', '30 days') },
-				{ days: 90, label: t('deck', '3 months') },
+				{
+					days: 7,
+					label: t('deck', '7d'),
+					ariaLabel: t('deck', 'Next 7 days'),
+				},
+				{
+					days: 30,
+					label: t('deck', '30d'),
+					ariaLabel: t('deck', 'Next 30 days'),
+				},
+				{
+					days: 90,
+					label: t('deck', '90d'),
+					ariaLabel: t('deck', 'Next 90 days'),
+				},
 			]
 		},
 		cards() {
@@ -117,14 +131,16 @@ export default {
 <style lang="scss" scoped>
 	.dashboard-controls {
 		display: flex;
+		flex-wrap: wrap;
 		align-items: center;
+		justify-content: space-between;
 		gap: 8px;
 		padding: 0 8px 8px;
 	}
 
 	.range-filter {
 		display: flex;
-		flex: 1;
+		flex: 1 1 auto;
 		min-width: 0;
 		padding: 2px;
 		gap: 2px;
@@ -134,17 +150,24 @@ export default {
 	}
 
 	.range-filter__button {
+		display: inline-flex;
+		align-items: center;
+		justify-content: center;
 		flex: 1 1 0%;
 		min-width: 0;
 		min-height: 30px;
 		margin: 0;
-		padding: 4px 6px;
+		padding: 4px 8px;
 		border: 0;
 		border-radius: var(--border-radius-pill);
 		background: transparent;
 		color: var(--color-text-maxcontrast);
+		font-size: var(--default-font-size-small, 0.85rem);
 		white-space: nowrap;
+		overflow: hidden;
+		text-overflow: ellipsis;
 		box-sizing: border-box;
+		cursor: pointer;
 
 		&:hover,
 		&:focus-visible {
@@ -169,12 +192,17 @@ export default {
 		display: inline-flex;
 		align-items: center;
 		justify-content: center;
+		flex-shrink: 0;
+		margin-inline-start: auto;
 		min-width: 30px;
 		height: 30px;
 		padding: 0 8px;
 		border-radius: var(--border-radius-pill);
 		background: var(--color-background-dark);
 		font-weight: 600;
+		font-size: var(--default-font-size-small, 0.85rem);
+		white-space: nowrap;
+		box-sizing: border-box;
 	}
 
 	.center-button {
