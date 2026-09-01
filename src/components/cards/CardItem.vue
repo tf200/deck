@@ -6,7 +6,7 @@
 <template>
 	<AttachmentDragAndDrop v-if="card" :card-id="card.id" class="drop-upload--card">
 		<div :ref="`card${card.id}`"
-			:class="{'compact': compactMode, 'current-card': currentCard, 'no-labels': !hasLabels, 'card__editable': canEdit, 'card__archived': card.archived, 'card__highlight': highlight}"
+			:class="{'compact': compactMode, 'current-card': currentCard, 'no-labels': !hasLabels, 'card__editable': canEdit && !isCombiBoard, 'card__archived': card.archived, 'card__highlight': highlight}"
 			:style="{backgroundColor: color}"
 			tag="div"
 			:tabindex="0"
@@ -243,6 +243,7 @@ export default {
 			this.$root.$emit('open-card', this.card.id)
 		},
 		triggerEditTitle() {
+			if (this.isCombiBoard) return
 			this.editingTitle = TITLE_EDITING_STATE.PENDING
 			this.$store.dispatch('toggleShortcutLock', true)
 			setTimeout(() => {
@@ -283,7 +284,9 @@ export default {
 				this.triggerEditTitle()
 				break
 			case 'KeyA':
-				this.$store.dispatch('archiveUnarchiveCard', { ...this.card, archived: !this.card.archived })
+				if (!this.isCombiBoard) {
+					this.$store.dispatch('archiveUnarchiveCard', { ...this.card, archived: !this.card.archived })
+				}
 				break
 			case 'KeyO':
 				if (!this.card.done && this.hasUnmetDependencies) {

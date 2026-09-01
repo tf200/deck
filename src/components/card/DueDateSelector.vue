@@ -83,7 +83,7 @@
 						<ClearIcon :size="20" />
 					</template>
 				</NcButton>
-				<NcButton type="secondary" @click="archiveUnarchiveCard()">
+				<NcButton v-if="!isCombiBoard" type="secondary" @click="archiveUnarchiveCard()">
 					<template #icon>
 						<ArchiveIcon :size="20" />
 					</template>
@@ -114,7 +114,7 @@ import CalendarCheck from 'vue-material-design-icons/CalendarCheckOutline.vue'
 import CheckIcon from 'vue-material-design-icons/Check.vue'
 import ClearIcon from 'vue-material-design-icons/Close.vue'
 import CardDetailEntry from './CardDetailEntry.vue'
-import { boardUsesStackCompletion, canVerifyCard } from '../../utils/cardCapabilities.js'
+import { boardUsesStackCompletion, canVerifyCard, isCombiProjectBoard } from '../../utils/cardCapabilities.js'
 
 export default defineComponent({
 	name: 'DueDateSelector',
@@ -168,6 +168,12 @@ export default defineComponent({
 			currentBoard: state => state.currentBoard,
 		}),
 		...mapGetters(['boardById', 'stackById']),
+		isCombiBoard() {
+			const boardId = this.card?.boardId ?? this.stackById(this.card?.stackId)?.boardId
+			const board = this.boardById(boardId) ?? this.boardById(Number(boardId))
+			return isCombiProjectBoard(board)
+				|| (Number(this.currentBoard?.id) === Number(boardId) && isCombiProjectBoard(this.currentBoard))
+		},
 		canVerify() {
 			return canVerifyCard(this.card)
 		},
@@ -267,6 +273,7 @@ export default defineComponent({
 			this.$store.dispatch('changeCardDoneStatus', { ...this.card, done: !this.card.done })
 		},
 		archiveUnarchiveCard() {
+			if (this.isCombiBoard) return
 			this.$store.dispatch('archiveUnarchiveCard', { ...this.card, archived: !this.card.archived })
 		},
 	},

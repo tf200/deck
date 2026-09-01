@@ -136,7 +136,7 @@
 				</NcActionButton>
 			</template>
 		</NcAppNavigationItem>
-		<div v-else-if="editing" class="board-edit">
+		<div v-else-if="editing && !board.isProjectBoard" class="board-edit">
 			<NcColorPicker v-model="editColor" class="app-navigation-entry-bullet-wrapper">
 				<button :style="{ backgroundColor: getColor }" class="color0 icon-colorpicker app-navigation-entry-bullet" />
 			</NcColorPicker>
@@ -314,6 +314,7 @@ export default {
 				})
 		},
 		actionEdit() {
+			if (this.board.isProjectBoard) return
 			this.editTitle = this.board.title
 			this.editColor = '#' + this.board.color
 			this.editing = true

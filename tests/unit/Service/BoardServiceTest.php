@@ -261,6 +261,21 @@ class BoardServiceTest extends TestCase {
 		$this->assertEquals($b->getArchived(), false);
 	}
 
+	public function testUpdateIsDeniedForCombiProjectBoard(): void {
+		$board = new Board();
+		$board->setId(123);
+		$board->setTitle('Project board');
+		$board->setArchived(false);
+		$this->boardMapper->method('find')->willReturn($board);
+		$this->permissionService->method('findUsers')->willReturn([]);
+		$this->sessionMapper->method('findAllActive')->willReturn([]);
+		$this->cardAccessPolicyIntegration->method('isCombiProjectBoard')->with(123)->willReturn(true);
+		$this->boardMapper->expects($this->never())->method('update');
+
+		$this->expectException(NoPermissionException::class);
+		$this->service->update(123, 'Renamed project board', 'ffffff', false);
+	}
+
 	public function testDelete() {
 		$board = new Board();
 		$board->setId(42);

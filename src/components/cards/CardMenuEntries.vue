@@ -17,7 +17,7 @@
 			<CardBulletedIcon slot="icon" :size="20" decorative />
 			{{ t('deck', 'Card details') }}
 		</NcActionButton>
-		<NcActionButton v-if="canEdit" :close-after-click="true" @click="editTitle">
+		<NcActionButton v-if="canEdit && !isCombiBoard" :close-after-click="true" @click="editTitle">
 			<template #icon>
 				<PencilIcon :size="20" decorative />
 			</template>
@@ -56,13 +56,13 @@
 			@click="action.callback(cardRichObject)">
 			{{ action.label }}
 		</NcActionButton>
-		<NcActionButton v-if="canEditBoard" :close-after-click="true" @click="archiveUnarchiveCard()">
+		<NcActionButton v-if="canEditBoard && !isCombiBoard" :close-after-click="true" @click="archiveUnarchiveCard()">
 			<template #icon>
 				<ArchiveIcon :size="20" decorative />
 			</template>
 			{{ card.archived ? t('deck', 'Unarchive card') : t('deck', 'Archive card') }}
 		</NcActionButton>
-		<NcActionButton v-if="canEdit"
+		<NcActionButton v-if="canEdit && !isCombiBoard"
 			icon="icon-delete"
 			:close-after-click="true"
 			@click="deleteCard()">
@@ -187,9 +187,11 @@ export default {
 			this.$root.$emit('open-card', this.card.id)
 		},
 		editTitle() {
+			if (this.isCombiBoard) return
 			this.$emit('edit-title', this.card.id)
 		},
 		deleteCard() {
+			if (this.isCombiBoard) return
 			this.$store.dispatch('deleteCard', this.card)
 			const undoCard = { ...this.card, deletedAt: 0 }
 			showUndo(t('deck', 'Card deleted'), () => this.$store.dispatch('cardUndoDelete', undoCard))
@@ -201,6 +203,7 @@ export default {
 			this.$store.dispatch('changeCardDoneStatus', { ...this.card, done: !this.card.done })
 		},
 		archiveUnarchiveCard() {
+			if (this.isCombiBoard) return
 			this.$store.dispatch('archiveUnarchiveCard', { ...this.card, archived: !this.card.archived })
 		},
 		assignCardToMe() {

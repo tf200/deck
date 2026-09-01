@@ -241,6 +241,7 @@ class BoardService {
 
 		$this->permissionService->checkPermission($this->boardMapper, $id, Acl::PERMISSION_MANAGE);
 		$board = $this->find($id);
+		$this->assertCombiBoardCanBeChanged($board);
 		if ($board->getDeletedAt() > 0) {
 			throw new BadRequestException('This board has already been deleted');
 		}
@@ -271,6 +272,7 @@ class BoardService {
 
 		$this->permissionService->checkPermission($this->boardMapper, $id, Acl::PERMISSION_MANAGE, allowDeletedBoard: true);
 		$board = $this->find($id, allowDeleted: true);
+		$this->assertCombiBoardCanBeChanged($board);
 		$board->setDeletedAt(0);
 		$board = $this->boardMapper->update($board);
 		$this->activityManager->triggerEvent(ActivityManager::DECK_OBJECT_BOARD, $board, ActivityManager::SUBJECT_BOARD_RESTORE);
@@ -299,6 +301,7 @@ class BoardService {
 
 		$this->permissionService->checkPermission($this->boardMapper, $id, Acl::PERMISSION_MANAGE, allowDeletedBoard: true);
 		$board = $this->find($id, allowDeleted: true);
+		$this->assertCombiBoardCanBeChanged($board);
 		$delete = $this->boardMapper->delete($board);
 
 		return $delete;
@@ -315,6 +318,10 @@ class BoardService {
 
 		$this->permissionService->checkPermission($this->boardMapper, $id, Acl::PERMISSION_MANAGE);
 		$board = $this->find($id);
+		if (($board->getTitle() !== $title || $board->getArchived() !== $archived)
+			&& $this->cardAccessPolicyIntegration->isCombiProjectBoard($board->getId())) {
+			throw new NoPermissionException('Combi project boards cannot be renamed or archived.');
+		}
 		$changes = new ChangeSet($board);
 		$board->setTitle($title);
 		$board->setColor($color);
@@ -327,6 +334,12 @@ class BoardService {
 		$this->eventDispatcher->dispatchTyped(new BoardUpdatedEvent($board->getId()));
 
 		return $board;
+	}
+
+	private function assertCombiBoardCanBeChanged(Board $board): void {
+		if ($this->cardAccessPolicyIntegration->isCombiProjectBoard($board->getId())) {
+			throw new NoPermissionException('Combi project boards cannot be deleted or restored.');
+		}
 	}
 
 	private function applyPermissions(int $boardId, bool $edit, bool $share, bool $manage, ?Acl $oldAcl = null): array {

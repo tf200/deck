@@ -458,6 +458,18 @@ class CardServiceTest extends TestCase {
 		$this->assertTrue($cardToBeDeleted->getDeletedAt() <= time(), 'deletedAt is in the past');
 	}
 
+	public function testDeleteIsDeniedForCombiProjectCard(): void {
+		$card = new Card();
+		$card->setId(123);
+		$this->cardMapper->method('find')->willReturn($card);
+		$this->cardMapper->method('findBoardId')->with(123)->willReturn(2);
+		$this->cardAccessPolicyIntegration->method('isCombiProjectBoard')->with(2)->willReturn(true);
+		$this->cardMapper->expects($this->never())->method('update');
+
+		$this->expectException(NoPermissionException::class);
+		$this->cardService->delete(123);
+	}
+
 	public function testMetadataUpdateDoesNotAssertTransition(): void {
 		$card = Card::fromParams([
 			'title' => 'Card title',

@@ -9,7 +9,7 @@
 		:active="tabId"
 		:name="displayTitle"
 		:subtitle="subtitleTooltip"
-		:name-editable.sync="isEditingTitle"
+		:name-editable.sync="isTitleEditable"
 		@update:name="(value) => titleEditing = value"
 		@update:active="(value) => activeTabId = value"
 		@dismiss-editing="titleEditing = currentCard.title"
@@ -113,6 +113,7 @@ import ActivityIcon from 'vue-material-design-icons/LightningBolt.vue'
 
 import { showError, showWarning } from '@nextcloud/dialogs'
 import { getLocale } from '@nextcloud/l10n'
+import { isCombiProjectBoard } from '../../utils/cardCapabilities.js'
 import CardMenuEntries from '../cards/CardMenuEntries.vue'
 
 const capabilities = getCapabilities()
@@ -173,6 +174,17 @@ export default {
 			hasCardSaveError: (state) => state.hasCardSaveError,
 		}),
 		...mapGetters(['canEdit', 'assignables', 'stackById']),
+		isCombiBoard() {
+			return isCombiProjectBoard(this.currentBoard)
+		},
+		isTitleEditable: {
+			get() {
+				return this.isEditingTitle && !this.isCombiBoard
+			},
+			set(value) {
+				this.isEditingTitle = value && !this.isCombiBoard
+			},
+		},
 		currentCard() {
 			return this.$store.getters.cardById(this.id)
 		},
@@ -238,6 +250,7 @@ export default {
 			})
 		},
 		handleSubmitTitle() {
+			if (this.isCombiBoard) return
 			if (this.titleEditing.trim() === '') {
 				showError(t('deck', 'The title cannot be empty.'))
 				return

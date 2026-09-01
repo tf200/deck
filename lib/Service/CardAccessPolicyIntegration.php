@@ -9,6 +9,8 @@ namespace OCA\Deck\Service;
 
 use OCA\Deck\Db\Card;
 use OCA\Deck\Db\IPermissionMapper;
+use OCP\DB\QueryBuilder\IQueryBuilder;
+use OCP\IDBConnection;
 use Psr\Log\LoggerInterface;
 
 class CardAccessPolicyIntegration {
@@ -70,6 +72,24 @@ class CardAccessPolicyIntegration {
 			return $provider->isCombiProjectCard($card);
 		} catch (\Throwable $e) {
 			$this->logger->debug('Combi project card status is unavailable', ['exception' => $e]);
+			return false;
+		}
+	}
+
+	public function isCombiProjectBoard(int $boardId): bool {
+		try {
+			$connection = \OCP\Server::get(IDBConnection::class);
+			$qb = $connection->getQueryBuilder();
+			$qb->select('type')
+				->from('custom_projects')
+				->where($qb->expr()->eq('board_id', $qb->createNamedParameter($boardId, IQueryBuilder::PARAM_INT)));
+			$result = $qb->executeQuery();
+			$type = $result->fetchOne();
+			$result->closeCursor();
+
+			return $type !== false && (int)$type === 0;
+		} catch (\Throwable $e) {
+			$this->logger->debug('Combi project board status is unavailable', ['exception' => $e]);
 			return false;
 		}
 	}

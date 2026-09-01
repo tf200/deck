@@ -268,6 +268,7 @@ class CardService {
 			throw new StatusException('Operation not allowed. This board is archived.');
 		}
 		$card = $this->cardMapper->find($id);
+		$this->assertCombiCardCanBeChanged($card, 'deleted');
 		$card->setDeletedAt(time());
 		$this->cardMapper->update($card);
 
@@ -296,6 +297,12 @@ class CardService {
 			throw new StatusException('Operation not allowed. This board is archived.');
 		}
 		$card = $this->cardMapper->find($id);
+		if (($card->getTitle() !== $title
+				|| ($deletedAt !== null && $card->getDeletedAt() !== $deletedAt)
+				|| ($archived !== null && $card->getArchived() !== $archived))
+			&& $this->isCombiProjectCard($card)) {
+			throw new NoPermissionException('Cards in a Combi project cannot be renamed, archived, deleted, or restored.');
+		}
 		$usesStackCompletion = $this->cardAccessPolicyIntegration->usesStackCompletion($card);
 		if ($archived !== null && $card->getArchived() && $archived === true) {
 			throw new StatusException('Operation not allowed. This card is archived.');
@@ -461,6 +468,7 @@ class CardService {
 			throw new StatusException('Operation not allowed. This board is archived.');
 		}
 		$card = $this->cardMapper->find($id);
+		$this->assertCombiCardCanBeChanged($card, 'renamed');
 		if ($card->getArchived()) {
 			throw new StatusException('Operation not allowed. This card is archived.');
 		}
@@ -550,6 +558,7 @@ class CardService {
 			throw new StatusException('Operation not allowed. This board is archived.');
 		}
 		$card = $this->cardMapper->find($id);
+		$this->assertCombiCardCanBeChanged($card, 'archived');
 		$changes = new ChangeSet($card);
 		$card->setArchived(true);
 		$newCard = $this->cardMapper->update($card);
@@ -578,6 +587,7 @@ class CardService {
 			throw new StatusException('Operation not allowed. This board is archived.');
 		}
 		$card = $this->cardMapper->find($id);
+		$this->assertCombiCardCanBeChanged($card, 'unarchived');
 		$changes = new ChangeSet($card);
 		$card->setArchived(false);
 		$newCard = $this->cardMapper->update($card);
@@ -587,6 +597,17 @@ class CardService {
 		$this->eventDispatcher->dispatchTyped(new CardUpdatedEvent($card, $changes->getBefore()));
 
 		return $newCard;
+	}
+
+	private function assertCombiCardCanBeChanged(Card $card, string $action): void {
+		if ($this->isCombiProjectCard($card)) {
+			throw new NoPermissionException("Cards in a Combi project cannot be $action.");
+		}
+	}
+
+	private function isCombiProjectCard(Card $card): bool {
+		$boardId = $this->cardMapper->findBoardId($card->getId());
+		return $this->cardAccessPolicyIntegration->isCombiProjectBoard($boardId);
 	}
 
 	/**

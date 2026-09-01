@@ -37,6 +37,7 @@ use OCA\Deck\Db\LabelMapper;
 use OCA\Deck\Db\Stack;
 use OCA\Deck\Db\StackMapper;
 use OCA\Deck\Model\CardDetails;
+use OCA\Deck\NoPermissionException;
 use OCA\Deck\Validators\StackServiceValidator;
 use OCP\EventDispatcher\IEventDispatcher;
 use Psr\Log\LoggerInterface;
@@ -61,6 +62,7 @@ class StackServiceTest extends TestCase {
 	private $labelMapper;
 	/** @var \PHPUnit\Framework\MockObject\MockObject|PermissionService */
 	private $permissionService;
+	private CardAccessPolicyIntegration&\PHPUnit\Framework\MockObject\MockObject $cardAccessPolicyIntegration;
 	/** @var AssignmentMapper|\PHPUnit\Framework\MockObject\MockObject */
 	private $assignedUsersMapper;
 	/** @var AttachmentService|\PHPUnit\Framework\MockObject\MockObject */
@@ -86,6 +88,7 @@ class StackServiceTest extends TestCase {
 		$this->cardMapper = $this->createMock(CardMapper::class);
 		$this->boardMapper = $this->createMock(BoardMapper::class);
 		$this->permissionService = $this->createMock(PermissionService::class);
+		$this->cardAccessPolicyIntegration = $this->createMock(CardAccessPolicyIntegration::class);
 		$this->boardService = $this->createMock(BoardService::class);
 		$this->cardService = $this->createMock(CardService::class);
 		$this->assignedUsersMapper = $this->createMock(AssignmentMapper::class);
@@ -103,6 +106,7 @@ class StackServiceTest extends TestCase {
 			$this->cardMapper,
 			$this->labelMapper,
 			$this->permissionService,
+			$this->cardAccessPolicyIntegration,
 			$this->boardService,
 			$this->cardService,
 			$this->assignedUsersMapper,
@@ -267,6 +271,18 @@ class StackServiceTest extends TestCase {
 		$this->stackService->delete(123);
 		$this->assertTrue($stackToBeDeleted->getDeletedAt() <= time(), 'deletedAt is in the past');
 		$this->assertTrue($stackToBeDeleted->getDeletedAt() > 0, 'deletedAt is set');
+	}
+
+	public function testDeleteIsDeniedForCombiProjectStack(): void {
+		$stack = new Stack();
+		$stack->setId(1);
+		$stack->setBoardId(2);
+		$this->stackMapper->method('find')->willReturn($stack);
+		$this->cardAccessPolicyIntegration->method('isCombiProjectBoard')->with(2)->willReturn(true);
+		$this->stackMapper->expects($this->never())->method('update');
+
+		$this->expectException(NoPermissionException::class);
+		$this->stackService->delete(1);
 	}
 
 	public function testUpdate() {

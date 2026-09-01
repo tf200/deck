@@ -33,6 +33,7 @@ class StackService {
 		private readonly CardMapper $cardMapper,
 		private readonly LabelMapper $labelMapper,
 		private readonly PermissionService $permissionService,
+		private readonly CardAccessPolicyIntegration $cardAccessPolicyIntegration,
 		private readonly BoardService $boardService,
 		private readonly CardService $cardService,
 		private readonly AssignmentMapper $assignedUsersMapper,
@@ -196,6 +197,7 @@ class StackService {
 		$this->permissionService->checkPermission($this->stackMapper, $id, Acl::PERMISSION_MANAGE);
 
 		$stack = $this->stackMapper->find($id);
+		$this->assertCombiStackCanBeChanged($stack);
 		$stack->setDeletedAt(time());
 		$stack = $this->stackMapper->update($stack);
 
@@ -227,6 +229,10 @@ class StackService {
 		}
 
 		$stack = $this->stackMapper->find($id);
+		if (($stack->getTitle() !== $title || $stack->getDeletedAt() !== $deletedAt)
+			&& $this->cardAccessPolicyIntegration->isCombiProjectBoard($stack->getBoardId())) {
+			throw new NoPermissionException('Lists in a Combi project cannot be renamed, deleted, or restored.');
+		}
 		$changes = new ChangeSet($stack);
 		$stack->setTitle($title);
 		$stack->setBoardId($boardId);
@@ -241,6 +247,12 @@ class StackService {
 		$this->eventDispatcher->dispatchTyped(new BoardUpdatedEvent($stack->getBoardId()));
 
 		return $stack;
+	}
+
+	private function assertCombiStackCanBeChanged(Stack $stack): void {
+		if ($this->cardAccessPolicyIntegration->isCombiProjectBoard($stack->getBoardId())) {
+			throw new NoPermissionException('Lists in a Combi project cannot be deleted.');
+		}
 	}
 
 	/**

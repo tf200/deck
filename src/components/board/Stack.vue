@@ -320,7 +320,7 @@ export default {
 			this.modalArchivAllCardsShow = false
 		},
 		startEditing(stack) {
-			if (this.dragging) {
+			if (this.dragging || this.isCombiProjectBoard) {
 				return
 			}
 
@@ -328,6 +328,10 @@ export default {
 			this.editing = true
 		},
 		finishedEdit(stack) {
+			if (this.isCombiProjectBoard) {
+				this.editing = false
+				return
+			}
 			if (this.copiedStack.title !== stack.title) {
 				this.$store.dispatch('updateStack', this.copiedStack)
 			}
