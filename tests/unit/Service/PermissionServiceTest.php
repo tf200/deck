@@ -140,6 +140,48 @@ class PermissionServiceTest extends \Test\TestCase {
 		$this->assertEquals($expected, $this->service->getPermissions(123));
 	}
 
+	public function testGetPermissionsProjectSuperAdminCanManageBoard(): void {
+		$board = new Board();
+		$board->setOwner('user1');
+		$this->boardMapper->method('find')->with(123)->willReturn($board);
+		$this->aclMapper->method('findAll')->with(123)->willReturn([]);
+		$this->cardAccessPolicyIntegration->expects($this->once())
+			->method('hasFullBoardAccess')
+			->with(123, 'admin')
+			->willReturn(true);
+		$this->shareManager->method('sharingDisabledForUser')->with('admin')->willReturn(false);
+
+		$this->assertSame([
+			Acl::PERMISSION_READ => true,
+			Acl::PERMISSION_EDIT => true,
+			Acl::PERMISSION_MANAGE => true,
+			Acl::PERMISSION_SHARE => true,
+		], $this->service->getPermissions(123));
+	}
+
+	public function testMatchPermissionsUsesResolvedProjectSuperAdminPermissions(): void {
+		$board = new Board();
+		$board->setId(123);
+		$board->setOwner('user1');
+		$board->setAcl([]);
+		$this->boardMapper->method('find')->with(123)->willReturn($board);
+		$this->aclMapper->method('findAll')->with(123)->willReturn([]);
+		$this->cardAccessPolicyIntegration->expects($this->once())
+			->method('hasFullBoardAccess')
+			->with(123, 'admin')
+			->willReturn(true);
+		$this->shareManager->method('sharingDisabledForUser')->with('admin')->willReturn(false);
+
+		$expected = [
+			Acl::PERMISSION_READ => true,
+			Acl::PERMISSION_EDIT => true,
+			Acl::PERMISSION_MANAGE => true,
+			Acl::PERMISSION_SHARE => true,
+		];
+		$this->assertSame($expected, $this->service->getPermissions(123));
+		$this->assertSame($expected, $this->service->matchPermissions($board));
+	}
+
 	public function testUserIsBoardOwner() {
 		$adminBoard = new Board();
 		$adminBoard->setOwner('admin');

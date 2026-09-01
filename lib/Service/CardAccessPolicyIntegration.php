@@ -26,6 +26,20 @@ class CardAccessPolicyIntegration {
 		return $this->getProvider()?->checkPermission($mapper, $id, $permission, $userId) ?? true;
 	}
 
+	public function hasFullBoardAccess(int $boardId, ?string $userId): bool {
+		$provider = $this->getProvider();
+		if ($provider === null || !method_exists($provider, 'hasFullBoardAccess')) {
+			return false;
+		}
+
+		try {
+			return $provider->hasFullBoardAccess($boardId, $userId);
+		} catch (\Throwable $e) {
+			$this->logger->debug('Project board access is unavailable', ['exception' => $e]);
+			return false;
+		}
+	}
+
 	/**
 	 * @param Card[] $cards
 	 * @return Card[]

@@ -9,6 +9,38 @@ use PHPUnit\Framework\TestCase;
 use Psr\Log\LoggerInterface;
 
 final class CardAccessPolicyIntegrationTest extends TestCase {
+	public function testFullBoardAccessDefaultsToFalseWithoutProvider(): void {
+		$integration = new CardAccessPolicyIntegration($this->createMock(LoggerInterface::class));
+		$this->setProvider($integration, null);
+
+		$this->assertFalse($integration->hasFullBoardAccess(42, 'admin'));
+	}
+
+	public function testFullBoardAccessIsDelegatedToProvider(): void {
+		$integration = new CardAccessPolicyIntegration($this->createMock(LoggerInterface::class));
+		$provider = new class {
+			public function hasFullBoardAccess(int $boardId, ?string $userId): bool {
+				return $boardId === 42 && $userId === 'admin';
+			}
+		};
+		$this->setProvider($integration, $provider);
+
+		$this->assertTrue($integration->hasFullBoardAccess(42, 'admin'));
+	}
+
+	public function testFullBoardAccessDefaultsToFalseWhenProviderFails(): void {
+		$logger = $this->createMock(LoggerInterface::class);
+		$logger->expects($this->once())->method('debug');
+		$integration = new CardAccessPolicyIntegration($logger);
+		$this->setProvider($integration, new class {
+			public function hasFullBoardAccess(int $boardId, ?string $userId): bool {
+				throw new \RuntimeException('Project tables are unavailable');
+			}
+		});
+
+		$this->assertFalse($integration->hasFullBoardAccess(42, 'admin'));
+	}
+
 	public function testCapabilitiesDefaultToAllowedWithoutProvider(): void {
 		$integration = new CardAccessPolicyIntegration($this->createMock(LoggerInterface::class));
 		$this->setProvider($integration, null);

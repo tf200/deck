@@ -102,11 +102,12 @@ class PermissionService {
 			$owner = false;
 			$acls = [];
 		}
+		$hasFullProjectAccess = !$owner && $this->cardAccessPolicyIntegration->hasFullBoardAccess($boardId, $userId);
 		$permissions = [
-			Acl::PERMISSION_READ => $owner || $this->userCan($acls, Acl::PERMISSION_READ, $userId),
-			Acl::PERMISSION_EDIT => $owner || $this->userCan($acls, Acl::PERMISSION_EDIT, $userId),
-			Acl::PERMISSION_MANAGE => $owner || $this->userCan($acls, Acl::PERMISSION_MANAGE, $userId),
-			Acl::PERMISSION_SHARE => ($owner || $this->userCan($acls, Acl::PERMISSION_SHARE, $userId))
+			Acl::PERMISSION_READ => $owner || $hasFullProjectAccess || $this->userCan($acls, Acl::PERMISSION_READ, $userId),
+			Acl::PERMISSION_EDIT => $owner || $hasFullProjectAccess || $this->userCan($acls, Acl::PERMISSION_EDIT, $userId),
+			Acl::PERMISSION_MANAGE => $owner || $hasFullProjectAccess || $this->userCan($acls, Acl::PERMISSION_MANAGE, $userId),
+			Acl::PERMISSION_SHARE => ($owner || $hasFullProjectAccess || $this->userCan($acls, Acl::PERMISSION_SHARE, $userId))
 				&& (!$this->shareManager->sharingDisabledForUser($userId))
 		];
 		$this->permissionCache->set($cacheKey, $permissions);
@@ -121,6 +122,11 @@ class PermissionService {
 	 * @internal param $boardId
 	 */
 	public function matchPermissions(Board $board) {
+		$cacheKey = $board->getId() . '-' . $this->userId;
+		if ($this->accessToken === null && $this->permissionCache->hasKey($cacheKey)) {
+			return $this->permissionCache->get($cacheKey);
+		}
+
 		$owner = $this->userIsBoardOwner($board->getId());
 		$acls = $board->getAcl() ?? [];
 		if ($this->accessToken !== null) {
@@ -131,11 +137,12 @@ class PermissionService {
 				Acl::PERMISSION_SHARE => $this->externalUserCan($acls, Acl::PERMISSION_SHARE, $this->accessToken)
 			];
 		}
+		$hasFullProjectAccess = !$owner && $this->cardAccessPolicyIntegration->hasFullBoardAccess($board->getId(), $this->userId);
 		return [
-			Acl::PERMISSION_READ => $owner || $this->userCan($acls, Acl::PERMISSION_READ),
-			Acl::PERMISSION_EDIT => $owner || $this->userCan($acls, Acl::PERMISSION_EDIT),
-			Acl::PERMISSION_MANAGE => $owner || $this->userCan($acls, Acl::PERMISSION_MANAGE),
-			Acl::PERMISSION_SHARE => ($owner || $this->userCan($acls, Acl::PERMISSION_SHARE))
+			Acl::PERMISSION_READ => $owner || $hasFullProjectAccess || $this->userCan($acls, Acl::PERMISSION_READ),
+			Acl::PERMISSION_EDIT => $owner || $hasFullProjectAccess || $this->userCan($acls, Acl::PERMISSION_EDIT),
+			Acl::PERMISSION_MANAGE => $owner || $hasFullProjectAccess || $this->userCan($acls, Acl::PERMISSION_MANAGE),
+			Acl::PERMISSION_SHARE => ($owner || $hasFullProjectAccess || $this->userCan($acls, Acl::PERMISSION_SHARE))
 				&& (!$this->shareManager->sharingDisabledForUser($this->userId))
 		];
 	}
