@@ -56,7 +56,7 @@ export default function storeFactory() {
 			currentBoard: null,
 			currentCard: null,
 			hasCardSaveError: false,
-			boards: loadState('deck', 'initialBoards', {}),
+			boards: loadState('deck', 'initialBoards', []),
 			sharees: [],
 			assignableUsers: [],
 			boardFilter: BOARD_FILTERS.ALL,
@@ -353,6 +353,7 @@ export default function storeFactory() {
 				dispatch('setFilter', filterReset)
 				commit('setCurrentBoard', null)
 				const board = await apiClient.loadById(boardId)
+				commit('addBoard', board)
 				commit('setCurrentBoard', board)
 				commit('setAssignableUsers', board.users)
 			},
