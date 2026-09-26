@@ -492,6 +492,9 @@ export default {
 	overflow: hidden;
 	box-sizing: border-box;
 	transition: border-color 0.2s ease, box-shadow 0.2s ease;
+	flex: 0 0 auto !important;
+	flex-shrink: 0 !important;
+	min-height: 44px;
 }
 
 .project-member-access:hover {
@@ -504,12 +507,15 @@ export default {
 	align-items: center;
 	justify-content: space-between;
 	padding: 10px 16px;
+	min-height: 44px;
+	box-sizing: border-box;
 	background: var(--color-background-hover);
 	cursor: pointer;
 	user-select: none;
 	gap: 12px;
 	border-bottom: 1px solid transparent;
 	transition: background 0.15s ease, border-color 0.15s ease;
+	flex-shrink: 0;
 }
 
 .project-member-access--expanded .project-member-access__header {

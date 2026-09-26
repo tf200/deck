@@ -306,6 +306,7 @@ export default {
 		height: 100%;
 		display: flex;
 		flex-direction: column;
+		min-height: 0;
 	}
 
 	.board {
@@ -324,10 +325,19 @@ export default {
 
 	.board-view--with-reporting {
 		overflow-y: auto;
+		overflow-x: hidden;
+		scrollbar-gutter: stable;
+		-webkit-overflow-scrolling: touch;
+
+		::v-deep .reporting-dashboard--inline,
+		::v-deep .project-member-access {
+			flex: 0 0 auto !important;
+			flex-shrink: 0 !important;
+		}
 
 		.board {
 			flex: 1 0 min(65vh, 650px);
-			min-height: 400px;
+			min-height: 420px;
 		}
 	}
 

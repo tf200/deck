@@ -355,7 +355,8 @@ export default {
 	overflow: hidden;
 	padding: 0;
 	height: auto;
-	flex: none;
+	flex: 0 0 auto !important;
+	flex-shrink: 0 !important;
 	box-sizing: border-box;
 	transition: border-color 0.2s ease, box-shadow 0.2s ease;
 }
@@ -370,12 +371,15 @@ export default {
 	align-items: center;
 	justify-content: space-between;
 	padding: 10px 16px;
+	min-height: 44px;
+	box-sizing: border-box;
 	background: var(--color-background-hover);
 	cursor: pointer;
 	user-select: none;
 	gap: 12px;
 	border-bottom: 1px solid transparent;
 	transition: background 0.15s ease, border-color 0.15s ease;
+	flex-shrink: 0;
 }
 
 .reporting-dashboard--expanded .reporting-dashboard__header {
@@ -461,19 +465,54 @@ export default {
 
 /* BODY WHEN INLINE */
 .reporting-dashboard--inline .reporting-dashboard__body {
-	padding: 16px 20px 20px;
+	padding: 14px 18px 18px;
 	background: var(--color-main-background);
 }
 
 .reporting-dashboard--inline .reporting-dashboard__kpis {
-	margin-bottom: 16px;
+	margin-bottom: 12px;
 	gap: 12px;
 }
 
 .reporting-dashboard--inline .reporting-dashboard__kpi-card {
-	padding: 14px 16px;
-	gap: 12px;
+	padding: 10px 14px;
+	gap: 10px;
 	border-radius: var(--border-radius-large, 10px);
+}
+
+.reporting-dashboard--inline .reporting-dashboard__kpi-value {
+	font-size: 22px;
+}
+
+.reporting-dashboard--inline .reporting-dashboard__kpi-label {
+	font-size: 12px;
+}
+
+.reporting-dashboard--inline .reporting-dashboard__charts {
+	gap: 12px;
+}
+
+.reporting-dashboard--inline .reporting-dashboard__chart-card {
+	padding: 12px 16px;
+	border-radius: var(--border-radius-large, 10px);
+}
+
+.reporting-dashboard--inline .reporting-dashboard__chart-card h3 {
+	margin: 0 0 8px 0;
+	font-size: 13px;
+}
+
+.reporting-dashboard--inline .reporting-dashboard__donut-container {
+	width: 120px;
+	height: 120px;
+}
+
+.reporting-dashboard--inline .reporting-dashboard__donut-text .percentage-val {
+	font-size: 22px;
+}
+
+.reporting-dashboard--inline .reporting-dashboard__bar-list {
+	gap: 8px;
 }
 
 @media (max-width: 900px) {
