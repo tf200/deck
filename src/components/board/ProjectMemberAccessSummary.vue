@@ -4,8 +4,10 @@
 -->
 
 <template>
-	<div v-if="hasProject" class="project-member-access">
-		<!-- COLLAPSIBLE ACCORDION HEADER -->
+	<div v-if="hasProject"
+		class="project-member-access"
+		:class="{ 'project-member-access--expanded': isExpanded }">
+		<!-- HEADER STRIP -->
 		<div class="project-member-access__header"
 			role="button"
 			tabindex="0"
@@ -17,7 +19,7 @@
 				<AccountGroup :size="20" class="project-member-access__title-icon" />
 				<span class="project-member-access__title">Permissions Overview</span>
 
-				<!-- EXECUTIVE SUMMARY PILLS (visible when summary loaded) -->
+				<!-- EXECUTIVE SUMMARY BADGES -->
 				<div v-if="summary" class="project-member-access__pills">
 					<span class="access-pill access-pill--neutral">
 						{{ totalMembersCount }} {{ totalMembersCount === 1 ? 'Member' : 'Members' }}
@@ -38,17 +40,21 @@
 			</div>
 
 			<div class="project-member-access__toggle-action">
-				<button type="button"
+				<NcButton type="tertiary"
+					size="small"
 					class="project-member-access__toggle-btn"
-					:aria-expanded="isExpanded ? 'true' : 'false'">
-					<span>{{ isExpanded ? 'Collapse Details' : 'Expand Details' }}</span>
-					<ChevronUp v-if="isExpanded" :size="18" />
-					<ChevronDown v-else :size="18" />
-				</button>
+					:aria-expanded="isExpanded ? 'true' : 'false'"
+					@click.stop="toggleExpand">
+					<template #icon>
+						<ChevronUp v-if="isExpanded" :size="18" />
+						<ChevronDown v-else :size="18" />
+					</template>
+					{{ isExpanded ? 'Collapse' : 'Expand' }}
+				</NcButton>
 			</div>
 		</div>
 
-		<!-- EXPANDED DRAWER BODY -->
+		<!-- EXPANDED BODY -->
 		<div v-if="isExpanded" class="project-member-access__body">
 			<div v-if="loading && !summary" class="project-member-access__state" role="status">
 				<NcLoadingIcon :size="24" />
@@ -104,7 +110,7 @@
 					<span>Try searching for a different member name or changing the access filter.</span>
 				</div>
 
-				<!-- MEMBER CARDS LIST (Bounded Scroll) -->
+				<!-- MEMBER CARDS LIST -->
 				<div v-else class="project-member-access__members">
 					<article v-for="member in filteredMemberRows" :key="member.id" class="project-member-access__member">
 						<div class="project-member-access__person">
@@ -132,7 +138,8 @@
 									</span>
 								</div>
 							</div>
-							<div class="project-member-access__board-state" :class="{ 'project-member-access__board-state--denied': !member.hasBoardAccess }">
+							<div class="project-member-access__board-state"
+								:class="`project-member-access__board-state--${member.boardAccessState}`">
 								<span class="project-member-access__status-dot" />
 								{{ member.boardAccessLabel }}
 							</div>
@@ -221,7 +228,7 @@ export default {
 	},
 	data() {
 		return {
-			isExpanded: false,
+			isExpanded: true,
 			resolvedProjectId: null,
 			summary: null,
 			loading: false,
@@ -300,6 +307,11 @@ export default {
 					}))
 					.filter(role => role.label)
 
+				const boardAccessState = boardAccess === 'edit' ? 'edit' : (boardAccess === 'read' ? 'read' : 'denied')
+				const boardAccessLabel = boardAccess === 'edit'
+					? 'Full edit access'
+					: (boardAccess === 'read' ? 'Read only' : 'Access denied')
+
 				return {
 					...member,
 					id: String(member.id || ''),
@@ -307,9 +319,8 @@ export default {
 					drasciRoles,
 					functionalRoles,
 					hasBoardAccess,
-					boardAccessLabel: boardAccess === 'edit'
-						? 'Board edit access'
-						: (boardAccess === 'read' ? 'Board read access' : 'Board access denied'),
+					boardAccessState,
+					boardAccessLabel,
 					actionRows: ACTIONS.map(action => this.buildActionRow(member, action, hasBoardAccess)),
 				}
 			})
@@ -322,8 +333,10 @@ export default {
 				await this.initialize()
 			},
 		},
-		projectId() {
-			this.initialize()
+		projectId(newVal, oldVal) {
+			if (newVal && newVal !== oldVal) {
+				this.initialize()
+			}
 		},
 	},
 	methods: {
@@ -359,6 +372,7 @@ export default {
 				return
 			}
 
+			this.loading = true
 			try {
 				const response = await axios.get(generateUrl(`/apps/projectcreatoraio/api/v1/projects/board/${bId}`), {
 					headers: {
@@ -380,6 +394,10 @@ export default {
 			} catch (e) {
 				if (reqId === this.initRequestId) {
 					this.hasProject = false
+				}
+			} finally {
+				if (reqId === this.initRequestId && !this.resolvedProjectId) {
+					this.loading = false
 				}
 			}
 		},
@@ -423,7 +441,7 @@ export default {
 				return {
 					...actionDefinition,
 					state: 'denied',
-					statusLabel: 'Board access denied',
+					statusLabel: 'Access denied',
 					allowedCards: [],
 				}
 			}
@@ -466,11 +484,11 @@ export default {
 
 <style scoped>
 .project-member-access {
-	margin: 0 16px 14px;
+	margin: 20px 24px 20px;
 	border: 1px solid var(--color-border);
-	border-radius: var(--border-radius-large, 8px);
+	border-radius: var(--border-radius-large, 12px);
 	background: var(--color-main-background);
-	box-shadow: 0 1px 4px rgba(0, 0, 0, 0.04);
+	box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
 	overflow: hidden;
 	transition: border-color 0.2s ease, box-shadow 0.2s ease;
 }
@@ -484,12 +502,17 @@ export default {
 	display: flex;
 	align-items: center;
 	justify-content: space-between;
-	padding: 10px 16px;
+	padding: 12px 18px;
 	background: var(--color-background-hover);
 	cursor: pointer;
 	user-select: none;
 	gap: 12px;
-	transition: background 0.15s ease;
+	border-bottom: 1px solid transparent;
+	transition: background 0.15s ease, border-color 0.15s ease;
+}
+
+.project-member-access--expanded .project-member-access__header {
+	border-bottom-color: var(--color-border);
 }
 
 .project-member-access__header:hover {
@@ -499,7 +522,7 @@ export default {
 .project-member-access__title-group {
 	display: flex;
 	align-items: center;
-	gap: 10px;
+	gap: 12px;
 	flex-wrap: wrap;
 	min-width: 0;
 }
@@ -511,7 +534,7 @@ export default {
 
 .project-member-access__title {
 	font-weight: 700;
-	font-size: 13.5px;
+	font-size: 14px;
 	color: var(--color-main-text);
 	white-space: nowrap;
 }
@@ -526,7 +549,7 @@ export default {
 .access-pill {
 	display: inline-flex;
 	align-items: center;
-	padding: 2px 8px;
+	padding: 2px 9px;
 	border-radius: 999px;
 	font-size: 11px;
 	font-weight: 600;
@@ -541,25 +564,25 @@ export default {
 }
 
 .access-pill--success {
-	background: rgba(46, 204, 113, 0.12);
-	color: #27ae60;
-	border: 1px solid rgba(46, 204, 113, 0.25);
+	background: var(--color-success-light, rgba(70, 186, 97, 0.15));
+	color: var(--color-success, #27ae60);
+	border: 1px solid var(--color-success, #27ae60);
 }
 
 .access-pill--warning {
-	background: rgba(243, 156, 18, 0.12);
-	color: #d35400;
-	border: 1px solid rgba(243, 156, 18, 0.25);
+	background: var(--color-warning-light, rgba(230, 126, 34, 0.15));
+	color: var(--color-warning, #d35400);
+	border: 1px solid var(--color-warning, #d35400);
 }
 
 .access-pill--danger {
-	background: rgba(231, 76, 60, 0.12);
-	color: #c0392b;
-	border: 1px solid rgba(231, 76, 60, 0.25);
+	background: var(--color-error-light, rgba(231, 76, 60, 0.15));
+	color: var(--color-error, #c0392b);
+	border: 1px solid var(--color-error, #c0392b);
 }
 
 .project-member-access__loading-text {
-	font-size: 11.5px;
+	font-size: 12px;
 	color: var(--color-text-maxcontrast);
 }
 
@@ -569,31 +592,13 @@ export default {
 	flex-shrink: 0;
 }
 
-.project-member-access__toggle-btn {
-	display: inline-flex;
-	align-items: center;
-	gap: 4px;
-	background: transparent;
-	border: none;
-	color: var(--color-primary-element);
-	font-size: 12px;
-	font-weight: 600;
-	cursor: pointer;
-	padding: 4px 6px;
-	border-radius: 4px;
-}
-
-.project-member-access__toggle-btn:hover {
-	background: rgba(0, 0, 0, 0.04);
-}
-
 /* EXPANDED DRAWER BODY */
 .project-member-access__body {
-	padding: 14px 16px;
-	border-top: 1px solid var(--color-border);
+	padding: 16px 18px 20px;
 	background: var(--color-main-background);
-	max-height: 480px;
+	max-height: 520px;
 	overflow-y: auto;
+	scrollbar-gutter: stable;
 }
 
 /* SEARCH & FILTER TOOLBAR */
@@ -603,7 +608,7 @@ export default {
 	justify-content: space-between;
 	gap: 12px;
 	padding: 8px 12px;
-	margin-bottom: 12px;
+	margin-bottom: 14px;
 	border: 1px solid var(--color-border);
 	border-radius: var(--border-radius-large, 8px);
 	background: var(--color-background-hover);
@@ -614,7 +619,7 @@ export default {
 	position: relative;
 	flex: 1;
 	min-width: 200px;
-	max-width: 340px;
+	max-width: 360px;
 	display: flex;
 	align-items: center;
 }
@@ -667,21 +672,27 @@ export default {
 /* MEMBER CARDS */
 .project-member-access__members {
 	display: grid;
-	gap: 10px;
+	gap: 12px;
 }
 
 .project-member-access__member {
-	padding: 12px 14px;
+	padding: 14px 16px;
 	border: 1px solid var(--color-border);
-	border-radius: var(--border-radius, 6px);
+	border-radius: var(--border-radius, 8px);
 	background: var(--color-main-background);
+	transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.project-member-access__member:hover {
+	border-color: var(--color-primary-element-light, var(--color-border));
+	box-shadow: 0 1px 4px rgba(0, 0, 0, 0.04);
 }
 
 .project-member-access__person {
 	display: grid;
 	grid-template-columns: auto minmax(0, 1fr) auto;
 	align-items: center;
-	gap: 10px;
+	gap: 12px;
 }
 
 .project-member-access__identity {
@@ -697,8 +708,8 @@ export default {
 
 .project-member-access__name-line h5 {
 	margin: 0;
-	font-size: 14px;
-	font-weight: 600;
+	font-size: 14.5px;
+	font-weight: 650;
 	overflow-wrap: anywhere;
 }
 
@@ -713,16 +724,16 @@ export default {
 
 .project-member-access__roles {
 	display: flex;
-	gap: 5px;
-	margin-top: 4px;
+	gap: 6px;
+	margin-top: 5px;
 	flex-wrap: wrap;
 }
 
 .project-member-access__role {
-	padding: 1px 7px;
+	padding: 2px 8px;
 	border: 1px solid var(--color-border);
 	border-radius: 999px;
-	font-size: 10.5px;
+	font-size: 11px;
 	color: var(--color-main-text);
 	overflow-wrap: anywhere;
 }
@@ -730,6 +741,7 @@ export default {
 .project-member-access__role--drasci {
 	border-color: var(--color-primary-element);
 	color: var(--color-primary-element);
+	font-weight: 600;
 }
 
 .project-member-access__role--empty {
@@ -741,19 +753,26 @@ export default {
 	display: inline-flex;
 	align-items: center;
 	gap: 6px;
-	color: #27ae60;
-	font-size: 11.5px;
+	font-size: 12px;
 	font-weight: 600;
 	white-space: nowrap;
 }
 
+.project-member-access__board-state--edit {
+	color: var(--color-success, #27ae60);
+}
+
+.project-member-access__board-state--read {
+	color: var(--color-warning, #d35400);
+}
+
 .project-member-access__board-state--denied {
-	color: #c0392b;
+	color: var(--color-error, #c0392b);
 }
 
 .project-member-access__status-dot {
-	width: 7px;
-	height: 7px;
+	width: 8px;
+	height: 8px;
 	border-radius: 50%;
 	background: currentColor;
 }
@@ -762,28 +781,32 @@ export default {
 .project-member-access__actions {
 	display: grid;
 	grid-template-columns: repeat(4, minmax(0, 1fr));
-	gap: 8px;
-	margin-top: 10px;
+	gap: 10px;
+	margin-top: 12px;
 }
 
 .project-member-access__action {
-	padding: 8px 10px;
+	padding: 10px 12px;
 	border: 1px solid var(--color-border);
 	border-top: 3px solid var(--color-text-maxcontrast);
-	border-radius: 4px;
+	border-radius: 6px;
 	background: var(--color-background-hover);
 }
 
 .project-member-access__action--all {
-	border-top-color: #27ae60;
+	border-top-color: var(--color-success, #27ae60);
 }
 
 .project-member-access__action--some {
-	border-top-color: #d35400;
+	border-top-color: var(--color-warning, #d35400);
 }
 
 .project-member-access__action--denied {
-	border-top-color: #c0392b;
+	border-top-color: var(--color-error, #c0392b);
+}
+
+.project-member-access__action--none {
+	border-top-color: var(--color-border-dark, #888);
 }
 
 .project-member-access__action-heading {
@@ -794,7 +817,7 @@ export default {
 .project-member-access__action-title-wrap {
 	display: flex;
 	align-items: center;
-	gap: 5px;
+	gap: 6px;
 }
 
 .project-member-access__action-icon {
@@ -803,7 +826,7 @@ export default {
 }
 
 .project-member-access__action-heading strong {
-	font-size: 12px;
+	font-size: 12.5px;
 }
 
 .project-member-access__action-status {
@@ -815,12 +838,12 @@ export default {
 .project-member-access__details-toggle {
 	display: inline-flex;
 	align-items: center;
-	gap: 2px;
-	padding: 4px 0 0;
+	gap: 3px;
+	padding: 5px 0 0;
 	border: 0;
 	background: transparent;
 	color: var(--color-primary-element);
-	font-size: 11px;
+	font-size: 11.5px;
 	font-weight: 600;
 	cursor: pointer;
 }
@@ -835,11 +858,11 @@ export default {
 
 .project-member-access__card-list {
 	display: grid;
-	gap: 3px;
-	margin: 6px 0 0;
+	gap: 4px;
+	margin: 8px 0 0;
 	padding-left: 16px;
 	color: var(--color-main-text);
-	font-size: 11px;
+	font-size: 11.5px;
 }
 
 .project-member-access__card-list li {
@@ -852,13 +875,13 @@ export default {
 	flex-direction: column;
 	align-items: center;
 	justify-content: center;
-	gap: 8px;
-	padding: 20px;
+	gap: 10px;
+	padding: 24px;
 	border: 1px dashed var(--color-border);
 	border-radius: var(--border-radius-large, 8px);
 	color: var(--color-text-maxcontrast);
 	text-align: center;
-	font-size: 12.5px;
+	font-size: 13px;
 }
 
 .project-member-access__state strong {
@@ -870,6 +893,10 @@ export default {
 }
 
 @media (max-width: 900px) {
+	.project-member-access {
+		margin: 14px 16px 16px;
+	}
+
 	.project-member-access__actions {
 		grid-template-columns: repeat(2, minmax(0, 1fr));
 	}
@@ -877,7 +904,7 @@ export default {
 
 @media (max-width: 600px) {
 	.project-member-access {
-		margin: 0 10px 10px;
+		margin: 10px 10px 12px;
 	}
 
 	.project-member-access__person {
