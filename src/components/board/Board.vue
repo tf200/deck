@@ -326,14 +326,14 @@ export default {
 		overflow-y: auto;
 
 		.board {
-			flex: 1 0 min(70vh, 720px);
-			min-height: 480px;
+			flex: 1 0 min(65vh, 650px);
+			min-height: 400px;
 		}
 	}
 
 	@media (max-width: 600px) {
 		.board-view--with-reporting .board {
-			min-height: 400px;
+			min-height: 360px;
 		}
 	}
 

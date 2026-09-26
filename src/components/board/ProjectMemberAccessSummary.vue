@@ -228,7 +228,7 @@ export default {
 	},
 	data() {
 		return {
-			isExpanded: true,
+			isExpanded: false,
 			resolvedProjectId: null,
 			summary: null,
 			loading: false,
@@ -484,12 +484,13 @@ export default {
 
 <style scoped>
 .project-member-access {
-	margin: 20px 24px 20px;
+	margin: 12px 20px 16px;
 	border: 1px solid var(--color-border);
 	border-radius: var(--border-radius-large, 12px);
 	background: var(--color-main-background);
-	box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+	box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
 	overflow: hidden;
+	box-sizing: border-box;
 	transition: border-color 0.2s ease, box-shadow 0.2s ease;
 }
 
@@ -502,7 +503,7 @@ export default {
 	display: flex;
 	align-items: center;
 	justify-content: space-between;
-	padding: 12px 18px;
+	padding: 10px 16px;
 	background: var(--color-background-hover);
 	cursor: pointer;
 	user-select: none;
@@ -894,7 +895,7 @@ export default {
 
 @media (max-width: 900px) {
 	.project-member-access {
-		margin: 14px 16px 16px;
+		margin: 10px 14px 14px;
 	}
 
 	.project-member-access__actions {
@@ -904,7 +905,7 @@ export default {
 
 @media (max-width: 600px) {
 	.project-member-access {
-		margin: 10px 10px 12px;
+		margin: 8px 10px 10px;
 	}
 
 	.project-member-access__person {
