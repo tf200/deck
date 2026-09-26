@@ -58,6 +58,9 @@
 					:board-id="board.id"
 					:inline="true"
 					:preloaded="true" />
+				<ProjectMemberAccessSummary v-if="showProjectDashboard"
+					:board-id="board.id"
+					:project-id="board.projectId" />
 				<div ref="board"
 					class="board"
 					@mousedown="onMouseDown">
@@ -101,6 +104,7 @@ import CheckIcon from 'vue-material-design-icons/Check.vue'
 import Stack from './Stack.vue'
 import GanttView from './GanttView.vue'
 import ReportingDashboard from './ReportingDashboard.vue'
+import ProjectMemberAccessSummary from './ProjectMemberAccessSummary.vue'
 import { NcEmptyContent, NcModal, NcButton, NcTextField, NcLoadingIcon } from '@nextcloud/vue'
 import GlobalSearchResults from '../search/GlobalSearchResults.vue'
 import { showError } from '../../helpers/errors.js'
@@ -117,6 +121,7 @@ export default {
 		Stack,
 		GanttView,
 		ReportingDashboard,
+		ProjectMemberAccessSummary,
 		NcEmptyContent,
 		NcModal,
 		NcTextField,

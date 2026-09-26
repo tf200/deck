@@ -84,7 +84,7 @@ class Board extends RelationalEntity {
 		try {
 			$db = \OCP\Server::get(\OCP\IDBConnection::class);
 			$qb = $db->getQueryBuilder();
-			$qb->select('p.type')
+			$qb->select('p.type', 'p.id')
 				->from('custom_projects', 'p')
 				->where($qb->expr()->eq('p.board_id', $qb->createNamedParameter((string)$this->getId())));
 			$res = $qb->executeQuery();
@@ -112,6 +112,7 @@ class Board extends RelationalEntity {
 		$doneStackId = $policySettings['done_stack_id'] ?? null;
 		$approvedStackId = $policySettings['approved_stack_id'] ?? null;
 		$json['isProjectBoard'] = !empty($row);
+		$json['projectId'] = isset($row['id']) ? (int)$row['id'] : null;
 		$json['projectType'] = isset($row['type']) ? (int)$row['type'] : null;
 		$json['completionByStack'] = isset($row['type']) && $doneStackId !== null && (int)$row['type'] === 0;
 		$json['doneStackId'] = $doneStackId !== null ? (int)$doneStackId : null;
