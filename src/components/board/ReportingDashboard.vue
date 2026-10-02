@@ -347,7 +347,7 @@ export default {
 }
 
 .reporting-dashboard--inline {
-	margin: 16px 20px 0;
+	margin: 12px 20px 16px;
 	border: 1px solid var(--color-border);
 	border-radius: var(--border-radius-large, 12px);
 	background: var(--color-main-background);
@@ -359,6 +359,10 @@ export default {
 	flex-shrink: 0 !important;
 	box-sizing: border-box;
 	transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.reporting-dashboard--inline:first-child {
+	margin-top: 16px;
 }
 
 .reporting-dashboard--inline:hover {
@@ -517,13 +521,21 @@ export default {
 
 @media (max-width: 900px) {
 	.reporting-dashboard--inline {
-		margin: 12px 14px 0;
+		margin: 10px 14px 14px;
+	}
+
+	.reporting-dashboard--inline:first-child {
+		margin-top: 12px;
 	}
 }
 
 @media (max-width: 600px) {
 	.reporting-dashboard--inline {
-		margin: 8px 10px 0;
+		margin: 8px 10px 10px;
+	}
+
+	.reporting-dashboard--inline:first-child {
+		margin-top: 8px;
 	}
 }
 

@@ -54,13 +54,13 @@
 				key="board"
 				class="board-view"
 				:class="{ 'board-view--with-reporting': showProjectDashboard }">
+				<ProjectMemberAccessSummary v-if="showProjectDashboard"
+					:board-id="board.id"
+					:project-id="board.projectId" />
 				<ReportingDashboard v-if="showProjectDashboard"
 					:board-id="board.id"
 					:inline="true"
 					:preloaded="true" />
-				<ProjectMemberAccessSummary v-if="showProjectDashboard"
-					:board-id="board.id"
-					:project-id="board.projectId" />
 				<div ref="board"
 					class="board"
 					@mousedown="onMouseDown">

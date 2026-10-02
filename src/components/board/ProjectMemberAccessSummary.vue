@@ -484,7 +484,7 @@ export default {
 
 <style scoped>
 .project-member-access {
-	margin: 12px 20px 16px;
+	margin: 16px 20px 0;
 	border: 1px solid var(--color-border);
 	border-radius: var(--border-radius-large, 12px);
 	background: var(--color-main-background);
@@ -901,7 +901,7 @@ export default {
 
 @media (max-width: 900px) {
 	.project-member-access {
-		margin: 10px 14px 14px;
+		margin: 12px 14px 0;
 	}
 
 	.project-member-access__actions {
@@ -911,7 +911,7 @@ export default {
 
 @media (max-width: 600px) {
 	.project-member-access {
-		margin: 8px 10px 10px;
+		margin: 8px 10px 0;
 	}
 
 	.project-member-access__person {
