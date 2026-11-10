@@ -25,7 +25,6 @@
 			<router-view name="sidebar" :visible="!cardDetailsInModal || !$route.params.cardId" />
 		</div>
 		<KeyboardShortcuts />
-		<CardMoveDialog />
 	</NcContent>
 </template>
 
@@ -37,14 +36,12 @@ import { NcModal, NcContent, NcAppContent, isMobile } from '@nextcloud/vue'
 import { BoardApi } from './services/BoardApi.js'
 import { emit, subscribe } from '@nextcloud/event-bus'
 import { loadState } from '@nextcloud/initial-state'
-import CardMoveDialog from './CardMoveDialog.vue'
 
 const boardApi = new BoardApi()
 
 export default {
 	name: 'App',
 	components: {
-		CardMoveDialog,
 		AppNavigation,
 		NcModal,
 		NcContent,

@@ -5,14 +5,6 @@
 
 <template>
 	<div>
-		<NcColorPicker v-model="editingCardColor" clearable @submit="updateCardColor">
-			<NcActionButton @click="openColorPicker">
-				<template #icon>
-					<SelectColor :fill-color="cardColor" :size="20" decorative />
-				</template>
-				{{ t('deck', 'Change card color') }}
-			</NcActionButton>
-		</NcColorPicker>
 		<NcActionButton v-if="!hideDetailsEntry" :close-after-click="true" @click="openCard">
 			<CardBulletedIcon slot="icon" :size="20" decorative />
 			{{ t('deck', 'Card details') }}
@@ -43,12 +35,6 @@
 			@click="changeCardDoneStatus()">
 			{{ card.done ? t('deck', 'Mark as not done') : t('deck', 'Mark as done') }}
 		</NcActionButton>
-		<NcActionButton v-if="canEdit && canEditBoard && canMoveCard"
-			icon="icon-external"
-			:close-after-click="true"
-			@click="openCardMoveDialog">
-			{{ t('deck', 'Move/copy card') }}
-		</NcActionButton>
 		<NcActionButton v-for="action in cardActions"
 			:key="action.label"
 			:close-after-click="true"
@@ -71,24 +57,22 @@
 	</div>
 </template>
 <script>
-import { NcActionButton, NcColorPicker } from '@nextcloud/vue'
+import { NcActionButton } from '@nextcloud/vue'
 import { mapGetters, mapState } from 'vuex'
 import ArchiveIcon from 'vue-material-design-icons/ArchiveOutline.vue'
 import CardBulletedIcon from 'vue-material-design-icons/CardBulletedOutline.vue'
 import PencilIcon from 'vue-material-design-icons/PencilOutline.vue'
-import SelectColor from 'vue-material-design-icons/Circle.vue'
 import { generateUrl } from '@nextcloud/router'
 import { getCurrentUser } from '@nextcloud/auth'
 import { showUndo } from '@nextcloud/dialogs'
 
 import '@nextcloud/dialogs/style.css'
-import { emit } from '@nextcloud/event-bus'
 import { useActionsStore } from '../../stores/actions.js'
-import { boardUsesStackCompletion, canVerifyCard, hasCardMoveCapability, isCombiProjectBoard } from '../../utils/cardCapabilities.js'
+import { boardUsesStackCompletion, canVerifyCard, isCombiProjectBoard } from '../../utils/cardCapabilities.js'
 
 export default {
 	name: 'CardMenuEntries',
-	components: { NcColorPicker, NcActionButton, ArchiveIcon, CardBulletedIcon, PencilIcon, SelectColor },
+	components: { NcActionButton, ArchiveIcon, CardBulletedIcon, PencilIcon },
 	props: {
 		card: {
 			type: Object,
@@ -104,15 +88,6 @@ export default {
 		const actionsStore = useActionsStore()
 		return {
 			cardActions: actionsStore.actions.card,
-		}
-	},
-	data() {
-		return {
-			modalShow: false,
-			selectedBoard: '',
-			selectedStack: '',
-			stacksFromBoard: [],
-			editingCardColor: '',
 		}
 	},
 	computed: {
@@ -131,9 +106,6 @@ export default {
 		},
 		canVerify() {
 			return canVerifyCard(this.card)
-		},
-		canMoveCard() {
-			return hasCardMoveCapability(this.card)
 		},
 		isInDoneColumn() {
 			return this.stackById(this.card.stackId)?.isDoneColumn === true
@@ -170,9 +142,6 @@ export default {
 				stackname: this.stackById(this.card.stackId)?.title,
 				link: window.location.protocol + '//' + window.location.host + generateUrl('/apps/deck/') + `card/${this.card.id}`,
 			}
-		},
-		cardColor() {
-			return this.card.color ? '#' + this.card.color : ''
 		},
 	},
 	methods: {
@@ -222,18 +191,6 @@ export default {
 					userId: getCurrentUser()?.uid,
 					type: 0,
 				},
-			})
-		},
-		openCardMoveDialog() {
-			emit('deck:card:show-move-dialog', this.card)
-		},
-		openColorPicker() {
-			this.editingCardColor = this.card.color ? '#' + this.card.color : ''
-		},
-		updateCardColor(val) {
-			this.$store.dispatch('updateCardColor', {
-				...this.card,
-				color: val ? val.substring(1) : null,
 			})
 		},
 	},
